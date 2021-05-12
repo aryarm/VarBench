@@ -1,0 +1,28 @@
+import warnings
+from pathlib import Path
+from snakemake.utils import min_version
+
+##### set minimum snakemake version #####
+min_version("6.3.0")
+
+configfile: "config/config.yaml"
+
+out = Path(config['results_dir'])
+data = Path(config['data_dir'])
+
+
+
+rule all:
+   input:	
+        truth_set = str(Path(data))+"/HG001_GRCh38_GIAB_highconf_CG-IllFB-IllGATKHC-Ion-10X-SOLID_CHROM1-X_v.3.3.2_highconf_PGandRTGphasetransfer.vcf.gz"
+
+
+rule download_data:
+    params:
+        data_dir = str(data)
+    output:
+        truth_set = str(data))+"/HG001_GRCh38_GIAB_highconf_CG-IllFB-IllGATKHC-Ion-10X-SOLID_CHROM1-X_v.3.3.2_highconf_PGandRTGphasetransfer.vcf.gz"
+    conda: "envs/default.yaml"
+    shell:
+        "scripts/download_giab.sh {params.data_dir}"
+

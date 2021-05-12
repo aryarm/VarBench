@@ -1,6 +1,6 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-mkdir data && cd data
+mkdir "$1" && cd "$1"
 
 ### VCF truthset and index ###
 echo "downloading VCF truthset from ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/NA12878_HG001/latest/..."
