@@ -1,0 +1,2 @@
+dependencies:
+  - bioconda::nanopolish==0.13.2

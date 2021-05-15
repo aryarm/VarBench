@@ -1,0 +1,2 @@
+dependencies:
+  - bioconda::clair==2.1.1

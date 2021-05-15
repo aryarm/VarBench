@@ -1,0 +1,2 @@
+dependencies:
+  - bioconda::nanosv==1.2.4
