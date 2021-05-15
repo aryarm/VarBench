@@ -1,2 +1,9 @@
 data_dir: data
 results_dir: results
+
+# set mode for testing
+test_mode: TRUE
+
+# inputs for testing
+illumina: /datasets/cs284-sp21-A00-public/ps4/NA12878.alt_bwamem_GRCh38DH.20150706.CEU.illumina_platinum_ped.cram
+ont: /datasets/cs284-sp21-A00-public/ps4/NA12878_chr22_ONT.sorted.bam
