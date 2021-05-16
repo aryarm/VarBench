@@ -64,7 +64,7 @@ run clair:
     output:
         vcf = out+"/{tech}/variants/clair.vcf.gz"
     params:
-        data_dir = str(data)
+        data_dir = str(data),
         model = "resources/clair_models/ont",
         output_prefix = out+"/{tech}/variants", 
         sample_name = "{tech}",
