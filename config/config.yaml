@@ -4,3 +4,5 @@ results_dir: results
 # inputs for testing
 illumina: /datasets/cs284-sp21-A00-public/ps4/NA12878.alt_bwamem_GRCh38DH.20150706.CEU.illumina_platinum_ped.cram
 ont: /datasets/cs284-sp21-A00-public/ps4/NA12878_chr22_ONT.sorted.bam
+truth: /datasets/cs284-sp21-A00-public/ps4/HG001_GRCh38_GIAB_highconf_CG-IllFB-IllGATKHC-Ion-10X-SOLID_CHROM1-X_v.3.3.2_highconf_PGandRTGphasetransfer.vcf.gz
+ref: /datasets/cs284-sp21-A00-public/ps4/GRCh38_full_analysis_set_plus_decoy_hla.fa
