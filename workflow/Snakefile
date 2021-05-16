@@ -46,6 +46,16 @@ rule download_data:
     shell:
         "scripts/download_giab.sh {params.data_dir}"
 
+rule longshot:
+    input:
+        reads = lambda wildcards: reads[wildcards.tech],
+        ref = config['ref']
+    output:
+        variants = out+"/{tech}/variants/longshot.vcf.gz"
+    conda: "envs/longshot.yaml"
+    shell:
+        "longshot --bam {input.reads} --ref {input.ref} --out {output.variants}"
+
 run clair:
     input:
         bam = expand()
@@ -157,3 +167,4 @@ rule freebayes:
     threads: 2
     wrapper:
         "0.74.0/bio/freebayes"
+
