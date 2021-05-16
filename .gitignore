@@ -1,5 +1,6 @@
 data/
 results/
+resources/
 .snakemake/
 
 # Byte-compiled / optimized / DLL files
