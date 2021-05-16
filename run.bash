@@ -18,7 +18,7 @@
 # Also, make sure that this script is executed from the directory that it lives in!
 
 # you can specify a directory for all output here:
-out_path="out"
+out_path="results"
 mkdir -p "$out_path"
 
 # clear leftover log files
@@ -44,6 +44,7 @@ snakemake \
 --config out="$out_path" \
 --latency-wait 60 \
 --use-conda \
+--conda-frontend conda \
 -k \
 -j 32 \
 "$@" 2>>"$out_path/log" >>"$out_path/qlog"

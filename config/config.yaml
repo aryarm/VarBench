@@ -13,7 +13,7 @@ data_dir: data
 
 # Path to the directory in which to store all output of the pipeline
 # Defaults to "results" if not specified
-results_dir: results
+out: results
 
 # Which variant callers should we use?
 # Defaults to all if this option is set to a falsey value
