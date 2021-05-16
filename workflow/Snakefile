@@ -32,7 +32,8 @@ if config['callers']:
 
 rule all:
    input:
-        confusion = out+"/matrix.tsv"
+        # confusion = out+"/matrix.tsv",
+        vcfs = expand(out+"/{tech}/variants/{caller}.vcf.gz", tech = ["ont",] , caller = callers)
 
 rule download_data:
     params:
@@ -48,27 +49,27 @@ rule download_data:
 
 rule longshot:
     input:
-        reads = lambda wildcards: reads[wildcards.tech],
+        bam = lambda wildcards: reads[wildcards.tech],
         ref = config['ref']
     output:
-        variants = out+"/{tech}/variants/longshot.vcf.gz"
+        vcf = out+"/{tech}/variants/longshot.vcf.gz"
     conda: "envs/longshot.yaml"
     shell:
-        "longshot --bam {input.reads} --ref {input.ref} --out {output.variants}"
+        "longshot --bam {input.bam} --ref {input.ref} --out {output.variants}"
 
 run clair:
     input:
-        bam = expand()
+        bam = lambda wildcards: reads[wildcards.tech],
+        ref = config['ref']
     output:
-        vcf = expand()
+        vcf = out+"/{tech}/variants/clair.vcf.gz"
     params:
         data_dir = str(data)
         model = "resources/clair_models/ont",
-        ref = "resources/hg38/hg38.fa",
-        output_prefix = "NA12878_ont", 
-        sample_name = "NA12878_ont",
+        output_prefix = out+"/{tech}/variants", 
+        sample_name = "{tech}",
     conda: "envs/clair.yaml"
-    threads: 4
+    threads: 2
     shell:
         """
         COMMAND=mktemp 
@@ -76,7 +77,7 @@ run clair:
         
         python clair.py callVarBamParallel \
         --chkpnt_fn "{params.model}" \
-        --ref_fn "{params.ref}" \
+        --ref_fn "{input.ref}" \
         --bam_fn "{input.bam}" \
         --threshold 0.2 \ # what is this?
         --sampleName "{params.sample_name}" \ 
@@ -94,16 +95,15 @@ run clair:
         
 rule nanosv:
     input:
-        bam = expand()
+        bam = lambda wildcards: reads[wildcards.tech],
     output:
-        vcf = expand()
+        vcf = out+"/{tech}/variants/nanosv.vcf.gz"
     params:
         data_dir = str(data)
-        ref = "resources/hg38/hg38.fa",
         output_prefix = "NA12878_ont", 
         sample_name = "NA12878_ont",
     conda: "envs/nanosv.yaml"
-    threads: 4
+    threads: 2
     shell:
         """
         NanoSV -t {threads} -s $(which samtools) {input.bam} -o {output.vcf}
@@ -111,39 +111,29 @@ rule nanosv:
 
 rule nanopolish:
     input:
-        fq = expand() 
-        bam = expand()
+        fq = lambda wildcards: {something}[wildcards.tech], # need to download fastq files!!
+        bam = lambda wildcards: reads[wildcards.tech],
+        ref = config['ref']
     output:
-        vcf = expand()
+        vcf = out+"/{tech}/variants/nanopolish.vcf.gz"
     params:
         data_dir = str(data)
     conda: "envs/nanopolish.yaml"
-    threads: 4
+    threads: 2
     shell:
         """
-        nanopolish variants --reads {input.fq} --bam {input.bam} -p 1 --outfile {output.vcf} 
+        nanopolish variants --reads {input.fq} --genome {input.ref} --bam {input.bam} -p 2 --outfile {output.vcf} 
         """
-'''
-rule gatk:
-    input:
-        reads = "NA12878.bam"
-        ref_genome = "hg38.fa"
-    output:
-        variants = "NA12878.vcf.gz"
-    conda: "envs/gatk4.yaml"
-    shell:
-        ""
-'''
 
 rule gatk:
     input:
         # single or list of bam files
-        bam="NA12878.bam", #Can I change these file names .. no right because of the wrapper 
-        ref="hg38.fa"
+        bam = lambda wildcards: reads[wildcards.tech],
+        ref = config['ref']
     output:
-        gvcf="NA12878.vcf.gz"
+        vcf = out+"/{tech}/variants/gatk.vcf.gz"
     log:
-        "logs/gatk/haplotypecaller/{sample}.log" #Keeping the optional log for now
+        "logs/gatk_{tech}.log" #Keeping the optional log for now
     resources:
         mem_mb=1024 #Not sure if we need this .. 
     wrapper:
@@ -152,13 +142,13 @@ rule gatk:
 rule freebayes:
     input:
         ref="hg38.fa",
-        samples="NA12878.bam",
+        samples = lambda wildcards: reads[wildcards.tech],
         # the matching BAI indexes have to present for freebayes
-        indexes="NA12878.bam.bai"
+        indexes = "lambda wildcards: reads[wildcards.tech]" + ".bai" # will this work?
     output:
-        "NA12878.vcf.gz"  # either .vcf or .bcf
+        vcf = out+"/{tech}/variants/freebayes.vcf.gz"
     log:
-        "logs/freebayes/{sample}.log"
+        "logs/freebayes_{tech}.log"
     params:
         extra="",         # optional parameters
         chunksize=100000, # reference genome chunk size for parallelization (default: 100000)
@@ -167,33 +157,32 @@ rule freebayes:
     wrapper:
         "0.74.0/bio/freebayes"
 
-rule strelka_germline:
+rule strelka:
     input:
         # the required bam file
-        bam="NA12878.bam",
+        bam = lambda wildcards: reads[wildcards.tech],
         # path to reference genome fasta and index
-        fasta="hg38.fa",
-        fasta_index="hg38.fa.fai"
+        fasta = config['ref']
+        fasta_index = config['ref']+'.fai'
     output:
         # Strelka results - either use directory or complete file path
-        directory("strelka/{sample}")
+        dir = directory(out+"/{tech}/variants/strelka"),
+        vcf = out+"/{tech}/variants/strelka/results/variants/genome.S1.vcf"
     log:
-        "logs/strelka/germline/{sample}.log"
+        "logs/strelka_{tech}.log"
     params:
         # optional parameters
         config_extra="",
         run_extra=""
-    threads: 8
+    threads: 2
     wrapper:
         "0.74.0/bio/strelka/germline"
 
 rule sniffles:
     input:
-        reads = "NA12878.bam"
-        #ref_genome = "hg38.fa"
+        bam = lambda wildcards: reads[wildcards.tech],
     output:
-        variants = "NA12878.vcf.gz"
-    conda: "envs/gatk4.yaml"
-    shell: #./sniffles -m mapped.sort.bam -v output.vcf
-        "sniffles -m {input.reads} -v {output.variants}"
-
+        vcf = out+"/{tech}/variants/sniffles.vcf.gz"
+    conda: "envs/sniffles.yaml"
+    shell: 
+        "sniffles -m {input.bam} -v {output.vcf}"
