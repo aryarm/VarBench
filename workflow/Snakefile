@@ -5,23 +5,43 @@ from snakemake.utils import min_version
 ##### set minimum snakemake version #####
 min_version("6.3.0")
 
+# IMPORT CONFIG VARIABLES
 configfile: "config/config.yaml"
+# remove any trailing slashes in directories
+out = str(Path(config['results_dir']))
+data = str(Path(config['data_dir']))
+# if we're in development mode, get the reads from DataHub instead of the data dir
+if config['develop']:
+    ont_reads = config['ont']
+else:
+    ont_reads = data+"/NA12878-minion-ul_GRCh38.bam"
 
-out = Path(config['results_dir'])
-data = Path(config['data_dir'])
+# WHICH CALLERS TO RUN?
+callers = {
+    'gatk', 'freebayes', 'strelka', 'sniffles', 'longshot', 'clair', 'nanosv',
+    'nanopolish', 'smartie', 'pbhoney'
+}
+if config['callers']:
+    # double check that the user isn't asking for callers that we can't run
+    if callers.issuperset(config['callers']):
+        warnings.warn("Not all of the callers requested can be executed. Proceeding with as many callers as is possible...")
+    callers = callers.intersection(config['callers'])
 
 
 
 rule all:
-   input:	
-        truth_set = str(Path(data))+"/HG001_GRCh38_GIAB_highconf_CG-IllFB-IllGATKHC-Ion-10X-SOLID_CHROM1-X_v.3.3.2_highconf_PGandRTGphasetransfer.vcf.gz"
+   input:
+        confusion = out+"/matrix.tsv"
 
 
 rule download_data:
     params:
-        data_dir = str(data)
+        data_dir = data
     output:
-        truth_set = str(data))+"/HG001_GRCh38_GIAB_highconf_CG-IllFB-IllGATKHC-Ion-10X-SOLID_CHROM1-X_v.3.3.2_highconf_PGandRTGphasetransfer.vcf.gz"
+        truth_set = data+"/HG001_GRCh38_GIAB_highconf_CG-IllFB-IllGATKHC-Ion-10X-SOLID_CHROM1-X_v.3.3.2_highconf_PGandRTGphasetransfer.vcf.gz",
+        illumina = data+"/RMNISTHS_30xdownsample.bam",
+        ont = data+"/NA12878-minion-ul_GRCh38.bam"
+        pacbio = data+"/sorted_final_merged.bam"
     conda: "envs/default.yaml"
     shell:
         "scripts/download_giab.sh {params.data_dir}"
