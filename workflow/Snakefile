@@ -22,8 +22,9 @@ if config['develop']:
 # WHICH CALLERS TO RUN?
 callers = {
     'gatk', 'freebayes', 'strelka', 'sniffles', 'longshot', 'clair', 'nanosv',
-    'nanopolish', 'smartie', 'pbhoney'
+    'nanopolish'
 }
+callers.remove('nanopolish') # TODO: remove this!
 if config['callers']:
     # double check that the user isn't asking for callers that we can't run
     if not callers.issuperset(config['callers']):
@@ -57,17 +58,16 @@ rule longshot:
     shell:
         "longshot --bam {input.bam} --ref {input.ref} --out {output.variants}"
 
-run clair:
+rule clair:
     input:
         bam = lambda wildcards: reads[wildcards.tech],
         ref = config['ref']
     output:
         vcf = out+"/{tech}/variants/clair.vcf.gz"
     params:
-        data_dir = str(data),
         model = "resources/clair_models/ont",
         output_prefix = out+"/{tech}/variants", 
-        sample_name = "{tech}",
+        sample_name = "{tech}"
     conda: "envs/clair.yaml"
     threads: 2
     shell:
@@ -99,7 +99,6 @@ rule nanosv:
     output:
         vcf = out+"/{tech}/variants/nanosv.vcf.gz"
     params:
-        data_dir = str(data)
         output_prefix = "NA12878_ont", 
         sample_name = "NA12878_ont",
     conda: "envs/nanosv.yaml"
@@ -111,7 +110,7 @@ rule nanosv:
 
 rule nanopolish:
     input:
-        fq = lambda wildcards: {something}[wildcards.tech], # need to download fastq files!!
+#        fq = lambda wildcards: {something}[wildcards.tech], # need to download fastq files!!
         bam = lambda wildcards: reads[wildcards.tech],
         ref = config['ref']
     output:
@@ -141,10 +140,10 @@ rule gatk:
 
 rule freebayes:
     input:
-        ref="hg38.fa",
+        ref=config['ref'],
         samples = lambda wildcards: reads[wildcards.tech],
         # the matching BAI indexes have to present for freebayes
-        indexes = "lambda wildcards: reads[wildcards.tech]" + ".bai" # will this work?
+        indexes = lambda wildcards: reads[wildcards.tech]+".bai"
     output:
         vcf = out+"/{tech}/variants/freebayes.vcf.gz"
     log:
@@ -157,17 +156,16 @@ rule freebayes:
     wrapper:
         "0.74.0/bio/freebayes"
 
-rule strelka:
+rule prepare_strelka:
     input:
         # the required bam file
         bam = lambda wildcards: reads[wildcards.tech],
         # path to reference genome fasta and index
-        fasta = config['ref']
+        fasta = config['ref'],
         fasta_index = config['ref']+'.fai'
     output:
         # Strelka results - either use directory or complete file path
-        dir = directory(out+"/{tech}/variants/strelka"),
-        vcf = out+"/{tech}/variants/strelka/results/variants/genome.S1.vcf"
+        dir = directory(out+"/{tech}/variants/strelka")
     log:
         "logs/strelka_{tech}.log"
     params:
@@ -177,6 +175,17 @@ rule strelka:
     threads: 2
     wrapper:
         "0.74.0/bio/strelka/germline"
+
+rule strelka:
+    input:
+        dir = out+"/{tech}/variants/strelka"
+    params:
+        vcf = lambda wildcards, input: input.dir+"/results/variants/genome.S1.vcf"
+    output:
+        vcf = out+"/{tech}/variants/strelka.vcf.gz"
+    conda: "envs/default.yaml"
+    shell:
+        "ln -s {params.vcf} {output.vcf}"
 
 rule sniffles:
     input:

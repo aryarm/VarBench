@@ -9,7 +9,7 @@
 # Path to directory in which to store the input data for the pipeline
 # The input data will be downloaded to this directory if it does not exist
 # Defaults to "data" if not specified
-data_dir: data
+data_dir: ../teams/CSE284_SP21_A00/team2/data
 
 # Path to the directory in which to store all output of the pipeline
 # Defaults to "results" if not specified
