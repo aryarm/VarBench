@@ -49,18 +49,6 @@ rule download_data:
     shell:
         "scripts/download_giab.sh {params.data_dir}"
 
-'''
-rule gatk:
-    input:
-        reads = "NA12878.bam"
-        ref_genome = "hg38.fa"
-    output:
-        variants = "NA12878.vcf.gz"
-    conda: "envs/gatk4.yaml"
-    shell:
-        ""
-'''
-
 rule gatk:
     input:
         # single or list of bam files
@@ -93,8 +81,35 @@ rule freebayes:
     wrapper:
         "0.74.0/bio/freebayes"
 
+rule strelka_germline:
+    input:
+        # the required bam file
+        bam="NA12878.bam",
+        # path to reference genome fasta and index
+        fasta="hg38.fa",
+        fasta_index="hg38.fa.fai"
+    output:
+        # Strelka results - either use directory or complete file path
+        directory("strelka/{sample}")
+    log:
+        "logs/strelka/germline/{sample}.log"
+    params:
+        # optional parameters
+        config_extra="",
+        run_extra=""
+    threads: 8
+    wrapper:
+        "0.74.0/bio/strelka/germline"
 
-
+rule sniffles:
+    input:
+        reads = "NA12878.bam"
+        #ref_genome = "hg38.fa"
+    output:
+        variants = "NA12878.vcf.gz"
+    conda: "envs/gatk4.yaml"
+    shell: #./sniffles -m mapped.sort.bam -v output.vcf
+        "sniffles -m {input.reads} -v {output.variants}"
 
 
 
