@@ -1,0 +1,2 @@
+dependencies:
+  - bioconda::freebayes==1.3.5
