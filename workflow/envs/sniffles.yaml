@@ -1,0 +1,2 @@
+dependencies:
+  - bioconda::sniffles==1.0.12

@@ -5,23 +5,43 @@ from snakemake.utils import min_version
 ##### set minimum snakemake version #####
 min_version("6.3.0")
 
+# IMPORT CONFIG VARIABLES
 configfile: "config/config.yaml"
+# remove any trailing slashes in directories
+out = str(Path(config['out']))
+data = str(Path(config['data_dir']))
+reads = {
+    'ont': data+"/NA12878-minion-ul_GRCh38.bam",
+    'illumina': data+"/RMNISTHS_30xdownsample.bam"
+}
+# if we're in development mode, get the reads from DataHub instead of the data dir
+if config['develop']:
+    for tech in config['develop_in']:
+        reads[tech] = config['develop_in'][tech]
 
-out = Path(config['results_dir'])
-data = Path(config['data_dir'])
-datasets = {'illumina': config['illumina'], 'ont': config['ont']}
-
+# WHICH CALLERS TO RUN?
+callers = {
+    'gatk', 'freebayes', 'strelka', 'sniffles', 'longshot', 'clair', 'nanosv',
+    'nanopolish', 'smartie', 'pbhoney'
+}
+if config['callers']:
+    # double check that the user isn't asking for callers that we can't run
+    if not callers.issuperset(config['callers']):
+        warnings.warn("Not all of the callers requested can be executed. Proceeding with as many callers as is possible...")
+    callers = callers.intersection(config['callers'])
 
 rule all:
-   input:	
-        truth_set = str(Path(data))+"/HG001_GRCh38_GIAB_highconf_CG-IllFB-IllGATKHC-Ion-10X-SOLID_CHROM1-X_v.3.3.2_highconf_PGandRTGphasetransfer.vcf.gz"
-
+   input:
+        confusion = out+"/matrix.tsv"
 
 rule download_data:
     params:
-        data_dir = str(data)
+        data_dir = data
     output:
-        truth_set = str(data))+"/HG001_GRCh38_GIAB_highconf_CG-IllFB-IllGATKHC-Ion-10X-SOLID_CHROM1-X_v.3.3.2_highconf_PGandRTGphasetransfer.vcf.gz"
+        truth_set = data+"/HG001_GRCh38_GIAB_highconf_CG-IllFB-IllGATKHC-Ion-10X-SOLID_CHROM1-X_v.3.3.2_highconf_PGandRTGphasetransfer.vcf.gz",
+        illumina = reads['illumina'],
+        ont = reads['ont'],
+        pacbio = data+"/sorted_final_merged.bam" # TODO: add this to reads dict above
     conda: "envs/default.yaml"
     shell:
         "scripts/download_giab.sh {params.data_dir}"
@@ -93,3 +113,47 @@ rule nanopolish:
         """
         nanopolish variants --reads {input.fq} --bam {input.bam} -p 1 --outfile {output.vcf} 
         """
+
+'''
+rule gatk:
+    input:
+        reads = "NA12878.bam"
+        ref_genome = "hg38.fa"
+    output:
+        variants = "NA12878.vcf.gz"
+    conda: "envs/gatk4.yaml"
+    shell:
+        ""
+'''
+
+rule gatk:
+    input:
+        # single or list of bam files
+        bam="NA12878.bam", #Can I change these file names .. no right because of the wrapper 
+        ref="hg38.fa"
+    output:
+        gvcf="NA12878.vcf.gz"
+    log:
+        "logs/gatk/haplotypecaller/{sample}.log" #Keeping the optional log for now
+    resources:
+        mem_mb=1024 #Not sure if we need this .. 
+    wrapper:
+        "0.74.0/bio/gatk/haplotypecaller"
+
+rule freebayes:
+    input:
+        ref="hg38.fa",
+        samples="NA12878.bam",
+        # the matching BAI indexes have to present for freebayes
+        indexes="NA12878.bam.bai"
+    output:
+        "NA12878.vcf.gz"  # either .vcf or .bcf
+    log:
+        "logs/freebayes/{sample}.log"
+    params:
+        extra="",         # optional parameters
+        chunksize=100000, # reference genome chunk size for parallelization (default: 100000)
+        normalize=False,  # flag to use bcftools norm to normalize indels
+    threads: 2
+    wrapper:
+        "0.74.0/bio/freebayes"
