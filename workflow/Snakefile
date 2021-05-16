@@ -48,3 +48,54 @@ rule download_data:
     conda: "envs/default.yaml"
     shell:
         "scripts/download_giab.sh {params.data_dir}"
+
+'''
+rule gatk:
+    input:
+        reads = "NA12878.bam"
+        ref_genome = "hg38.fa"
+    output:
+        variants = "NA12878.vcf.gz"
+    conda: "envs/gatk4.yaml"
+    shell:
+        ""
+'''
+
+rule gatk:
+    input:
+        # single or list of bam files
+        bam="NA12878.bam", #Can I change these file names .. no right because of the wrapper 
+        ref="hg38.fa"
+    output:
+        gvcf="NA12878.vcf.gz"
+    log:
+        "logs/gatk/haplotypecaller/{sample}.log" #Keeping the optional log for now
+    resources:
+        mem_mb=1024 #Not sure if we need this .. 
+    wrapper:
+        "0.74.0/bio/gatk/haplotypecaller"
+
+rule freebayes:
+    input:
+        ref="hg38.fa",
+        samples="NA12878.bam",
+        # the matching BAI indexes have to present for freebayes
+        indexes="NA12878.bam.bai"
+    output:
+        "NA12878.vcf.gz"  # either .vcf or .bcf
+    log:
+        "logs/freebayes/{sample}.log"
+    params:
+        extra="",         # optional parameters
+        chunksize=100000, # reference genome chunk size for parallelization (default: 100000)
+        normalize=False,  # flag to use bcftools norm to normalize indels
+    threads: 2
+    wrapper:
+        "0.74.0/bio/freebayes"
+
+
+
+
+
+
+
