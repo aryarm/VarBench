@@ -10,11 +10,14 @@ configfile: "config/config.yaml"
 # remove any trailing slashes in directories
 out = str(Path(config['results_dir']))
 data = str(Path(config['data_dir']))
+reads = {
+    'ont': data+"/NA12878-minion-ul_GRCh38.bam",
+    'illumina': data+"/RMNISTHS_30xdownsample.bam"
+}
 # if we're in development mode, get the reads from DataHub instead of the data dir
 if config['develop']:
-    ont_reads = config['ont']
-else:
-    ont_reads = data+"/NA12878-minion-ul_GRCh38.bam"
+    for tech in config['develop_in']:
+        reads[tech] = config['develop_in'][tech]
 
 # WHICH CALLERS TO RUN?
 callers = {
@@ -39,10 +42,9 @@ rule download_data:
         data_dir = data
     output:
         truth_set = data+"/HG001_GRCh38_GIAB_highconf_CG-IllFB-IllGATKHC-Ion-10X-SOLID_CHROM1-X_v.3.3.2_highconf_PGandRTGphasetransfer.vcf.gz",
-        illumina = data+"/RMNISTHS_30xdownsample.bam",
-        ont = data+"/NA12878-minion-ul_GRCh38.bam"
-        pacbio = data+"/sorted_final_merged.bam"
+        illumina = reads['illumina'],
+        ont = reads['ont']
+        pacbio = data+"/sorted_final_merged.bam" # TODO: add this to reads dict above
     conda: "envs/default.yaml"
     shell:
         "scripts/download_giab.sh {params.data_dir}"
-

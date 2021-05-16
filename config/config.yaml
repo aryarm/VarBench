@@ -40,6 +40,6 @@ develop: true
 # "ont" refers to a BAM file containing long reads for a single chromosme sequenced
 #       using Oxford Nanopore
 # Note: each file must have a corresponding index in the same directory
-testing:
+develop_in:
     illumina: /datasets/cs284-sp21-A00-public/ps4/NA12878.alt_bwamem_GRCh38DH.20150706.CEU.illumina_platinum_ped.cram
     ont: /datasets/cs284-sp21-A00-public/ps4/NA12878_chr22_ONT.sorted.bam
