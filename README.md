@@ -5,7 +5,7 @@ Benchmarking variant callers for long read data
 
 All data is aligned to GRCh38. We use the genome in a bottle (GIAB) truthset v3.3.2 from NA12878 DNA.
 
-1. Illumina, 300x coverage, novoalign
+1. Illumina, 30x & 300x coverage, novoalign
 2. Ultralong Oxford Nanopore
 3. Pacbio Hifi
 

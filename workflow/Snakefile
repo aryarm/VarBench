@@ -30,12 +30,9 @@ if config['callers']:
         warnings.warn("Not all of the callers requested can be executed. Proceeding with as many callers as is possible...")
     callers = callers.intersection(config['callers'])
 
-
-
 rule all:
    input:
         confusion = out+"/matrix.tsv"
-
 
 rule download_data:
     params:
@@ -49,7 +46,6 @@ rule download_data:
     shell:
         "scripts/download_giab.sh {params.data_dir}"
 
-
 rule longshot:
     input:
         reads = lambda wildcards: reads[wildcards.tech],
@@ -59,3 +55,116 @@ rule longshot:
     conda: "envs/longshot.yaml"
     shell:
         "longshot --bam {input.reads} --ref {input.ref} --out {output.variants}"
+
+run clair:
+    input:
+        bam = expand()
+    output:
+        vcf = expand()
+    params:
+        data_dir = str(data)
+        model = "resources/clair_models/ont",
+        ref = "resources/hg38/hg38.fa",
+        output_prefix = "NA12878_ont", 
+        sample_name = "NA12878_ont",
+    conda: "envs/clair.yaml"
+    threads: 4
+    shell:
+        """
+        COMMAND=mktemp 
+        CLAIR=$(which clair.py)
+        
+        python clair.py callVarBamParallel \
+        --chkpnt_fn "{params.model}" \
+        --ref_fn "{params.ref}" \
+        --bam_fn "{input.bam}" \
+        --threshold 0.2 \ # what is this?
+        --sampleName "{params.sample_name}" \ 
+        --output_prefix "{params.output_prefix}" > $COMMAND
+        
+        # run Clair with 4 concurrencies
+        cat $COMMAND | parallel -j{threads}
+        
+        # Find incomplete VCF files and rerun them
+        for i in {params.output_prefix}.*.vcf; do if ! [ -z "$(tail -c 1 "$i")" ]; then echo "$i"; fi ; done | grep -f - $COMMAND | sh
+        
+        # concatenate vcf files and sort the variants called
+        vcfcat {params.output_prefix}.*.vcf | bcftools sort -m 2G | bgziptabix snp_and_indel.vcf.gz
+        """
+        
+rule nanosv:
+    input:
+        bam = expand()
+    output:
+        vcf = expand()
+    params:
+        data_dir = str(data)
+        ref = "resources/hg38/hg38.fa",
+        output_prefix = "NA12878_ont", 
+        sample_name = "NA12878_ont",
+    conda: "envs/nanosv.yaml"
+    threads: 4
+    shell:
+        """
+        NanoSV -t {threads} -s $(which samtools) {input.bam} -o {output.vcf}
+        """
+
+rule nanopolish:
+    input:
+        fq = expand() 
+        bam = expand()
+    output:
+        vcf = expand()
+    params:
+        data_dir = str(data)
+    conda: "envs/nanopolish.yaml"
+    threads: 4
+    shell:
+        """
+        nanopolish variants --reads {input.fq} --bam {input.bam} -p 1 --outfile {output.vcf} 
+        """
+
+'''
+rule gatk:
+    input:
+        reads = "NA12878.bam"
+        ref_genome = "hg38.fa"
+    output:
+        variants = "NA12878.vcf.gz"
+    conda: "envs/gatk4.yaml"
+    shell:
+        ""
+'''
+
+rule gatk:
+    input:
+        # single or list of bam files
+        bam="NA12878.bam", #Can I change these file names .. no right because of the wrapper 
+        ref="hg38.fa"
+    output:
+        gvcf="NA12878.vcf.gz"
+    log:
+        "logs/gatk/haplotypecaller/{sample}.log" #Keeping the optional log for now
+    resources:
+        mem_mb=1024 #Not sure if we need this .. 
+    wrapper:
+        "0.74.0/bio/gatk/haplotypecaller"
+
+rule freebayes:
+    input:
+        ref="hg38.fa",
+        samples="NA12878.bam",
+        # the matching BAI indexes have to present for freebayes
+        indexes="NA12878.bam.bai"
+    output:
+        "NA12878.vcf.gz"  # either .vcf or .bcf
+    log:
+        "logs/freebayes/{sample}.log"
+    params:
+        extra="",         # optional parameters
+        chunksize=100000, # reference genome chunk size for parallelization (default: 100000)
+        normalize=False,  # flag to use bcftools norm to normalize indels
+    threads: 2
+    wrapper:
+        "0.74.0/bio/freebayes"
+
