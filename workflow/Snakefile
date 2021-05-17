@@ -34,7 +34,7 @@ if config['callers']:
 rule all:
    input:
         # confusion = out+"/matrix.tsv",
-        vcfs = expand(out+"/{tech}/variants/{caller}.vcf.gz", tech = ["ont",] , caller = callers)
+        vcfs = expand(out+"/{tech}/variants/{caller}.vcf.gz", tech = ["ont","illumina"] , caller = callers)
 
 rule download_data:
     params:
@@ -54,9 +54,13 @@ rule longshot:
         ref = config['ref']
     output:
         vcf = out+"/{tech}/variants/longshot.vcf.gz"
+    log:
+        "logs/longshot_{tech}.log"
+    benchmark:
+        "bench/longshot_{tech}.tsv"
     conda: "envs/longshot.yaml"
     shell:
-        "longshot --bam {input.bam} --ref {input.ref} --out {output.variants}"
+        "longshot --bam {input.bam} --ref {input.ref} --out {output.variants} 2> {log}"
 
 rule clair:
     input:
@@ -64,6 +68,10 @@ rule clair:
         ref = config['ref']
     output:
         vcf = out+"/{tech}/variants/clair.vcf.gz"
+    log:
+        "logs/clair_{tech}.log"
+    benchmark:
+        "bench/clair_{tech}.tsv"
     params:
         model = "resources/clair_models/ont",
         output_prefix = out+"/{tech}/variants", 
@@ -81,16 +89,16 @@ rule clair:
         --bam_fn "{input.bam}" \
         --threshold 0.2 \ # what is this?
         --sampleName "{params.sample_name}" \ 
-        --output_prefix "{params.output_prefix}" > $COMMAND
+        --output_prefix "{params.output_prefix}" > $COMMAND 2> {log}
         
         # run Clair with 4 concurrencies
-        cat $COMMAND | parallel -j{threads}
+        cat $COMMAND | parallel -j{threads} 2>> {log}
         
         # Find incomplete VCF files and rerun them
-        for i in {params.output_prefix}.*.vcf; do if ! [ -z "$(tail -c 1 "$i")" ]; then echo "$i"; fi ; done | grep -f - $COMMAND | sh
+        for i in {params.output_prefix}.*.vcf; do if ! [ -z "$(tail -c 1 "$i")" ]; then echo "$i"; fi ; done | grep -f - $COMMAND | sh 2>> {log}
         
         # concatenate vcf files and sort the variants called
-        vcfcat {params.output_prefix}.*.vcf | bcftools sort -m 2G | bgziptabix snp_and_indel.vcf.gz
+        vcfcat {params.output_prefix}.*.vcf | bcftools sort -m 2G | bgziptabix snp_and_indel.vcf.gz 2>> {log}
         """
         
 rule nanosv:
@@ -101,11 +109,15 @@ rule nanosv:
     params:
         output_prefix = "NA12878_ont", 
         sample_name = "NA12878_ont",
+    log:
+        "logs/nanosv_{tech}.log"
+    benchmark:
+        "bench/nanosv_{tech}.tsv"
     conda: "envs/nanosv.yaml"
     threads: 2
     shell:
         """
-        NanoSV -t {threads} -s $(which samtools) {input.bam} -o {output.vcf}
+        NanoSV -t {threads} -s $(which samtools) {input.bam} -o {output.vcf} 2> {log}
         """
 
 rule nanopolish:
@@ -115,13 +127,17 @@ rule nanopolish:
         ref = config['ref']
     output:
         vcf = out+"/{tech}/variants/nanopolish.vcf.gz"
+    log:
+        "logs/nanopolish_{tech}.log"
+    benchmark:
+        "bench/nanopolish_{tech}.tsv"
     params:
         data_dir = str(data)
     conda: "envs/nanopolish.yaml"
     threads: 2
     shell:
         """
-        nanopolish variants --reads {input.fq} --genome {input.ref} --bam {input.bam} -p 2 --outfile {output.vcf} 
+        nanopolish variants --reads {input.fq} --genome {input.ref} --bam {input.bam} -p 2 --outfile {output.vcf} 2> {log}
         """
 
 rule gatk:
@@ -132,7 +148,9 @@ rule gatk:
     output:
         vcf = out+"/{tech}/variants/gatk.vcf.gz"
     log:
-        "logs/gatk_{tech}.log" #Keeping the optional log for now
+        "logs/gatk_{tech}.log"
+    benchmark:
+        "bench/gatk_{tech}.tsv"
     resources:
         mem_mb=1024 #Not sure if we need this .. 
     wrapper:
@@ -148,6 +166,8 @@ rule freebayes:
         vcf = out+"/{tech}/variants/freebayes.vcf.gz"
     log:
         "logs/freebayes_{tech}.log"
+    benchmark:
+        "bench/freebayes_{tech}.tsv"
     params:
         extra="",         # optional parameters
         chunksize=100000, # reference genome chunk size for parallelization (default: 100000)
@@ -168,6 +188,8 @@ rule prepare_strelka:
         dir = directory(out+"/{tech}/variants/strelka")
     log:
         "logs/strelka_{tech}.log"
+    benchmark:
+        "bench/strelka_{tech}.tsv"
     params:
         # optional parameters
         config_extra="",
@@ -192,6 +214,10 @@ rule sniffles:
         bam = lambda wildcards: reads[wildcards.tech],
     output:
         vcf = out+"/{tech}/variants/sniffles.vcf.gz"
+    log:
+        "logs/sniffles_{tech}.log"
+    benchmark:
+        "bench/sniffles_{tech}.tsv"
     conda: "envs/sniffles.yaml"
     shell: 
-        "sniffles -m {input.bam} -v {output.vcf}"
+        "sniffles -m {input.bam} -v {output.vcf} 2> {log}"
