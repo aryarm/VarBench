@@ -60,7 +60,7 @@ rule longshot:
         "bench/longshot_{tech}.tsv"
     conda: "envs/longshot.yaml"
     shell:
-        "longshot --bam {input.bam} --ref {input.ref} --out {output.variants} 2> {log}"
+        "longshot --bam {input.bam} --ref {input.ref} --out {output.vcf} 2> {log}"
 
 rule clair:
     input:
