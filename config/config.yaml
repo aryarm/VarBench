@@ -16,7 +16,7 @@ data_dir: ../teams/CSE284_SP21_A00/team2/data
 out: results
 
 # Which variant callers should we use?
-# Defaults to all if this option is set to a falsey value
+# Defaults to all if this option is set to a false value
 callers: false
 
 # Path to a gzipped VCF containing known, high-confidence variants for NA12878
