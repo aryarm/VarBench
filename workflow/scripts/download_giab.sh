@@ -41,11 +41,11 @@ cd ..
 mkdir OxfordNanopore && cd OxfordNanopore
 
 # README
-wget https://ftp-trace.ncbi.nlm.nih.gov/giab/ftp/data/NA12878/Ultralong_OxfordNanopore/Ultralong_OxfordNanopore/NA12878-minion-ul-README.txt
+wget https://ftp-trace.ncbi.nlm.nih.gov/giab/ftp/data/NA12878/Ultralong_OxfordNanopore/NA12878-minion-ul-README.txt
 
 # bam file and index
-wget https://ftp-trace.ncbi.nlm.nih.gov/giab/ftp/data/NA12878/Ultralong_OxfordNanopore/Ultralong_OxfordNanopore/NA12878-minion-ul_GRCh38.bam
-wget https://ftp-trace.ncbi.nlm.nih.gov/giab/ftp/data/NA12878/Ultralong_OxfordNanopore/Ultralong_OxfordNanopore/NA12878-minion-ul_GRCh38.bam.bai
+wget https://ftp-trace.ncbi.nlm.nih.gov/giab/ftp/data/NA12878/Ultralong_OxfordNanopore/NA12878-minion-ul_GRCh38.bam
+wget https://ftp-trace.ncbi.nlm.nih.gov/giab/ftp/data/NA12878/Ultralong_OxfordNanopore/NA12878-minion-ul_GRCh38.bam.bai
 
 echo "done"
 
