@@ -12,5 +12,5 @@ All data is aligned to GRCh38. We use the genome in a bottle (GIAB) truthset v3.
 "Until it is published, please cite http://www.nature.com/nbt/journal/v32/n3/full/nbt.2835.html (doi:10.1038/nbt.2835) and http://www.nature.com/articles/sdata201625 (doi:10.1038/sdata.2016.25) when using these calls."
 
 # Documentation
-See our [wiki](wiki) for all of our documentation!
+See our [wiki](../../wiki) for all of our documentation!
 
