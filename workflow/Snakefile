@@ -16,15 +16,20 @@ reads = {
 }
 # if we're in development mode, get the reads from DataHub instead of the data dir
 if config['develop']:
-    for tech in config['develop_in']:
-        reads[tech] = config['develop_in'][tech]
-
+    for tech in config['develop_in']['tech']:
+        reads[tech] = config['develop_in']['tech'][tech]
+    ref = config['develop_in']['annot']['ref']
+    strelka_bed = config['develop_in']['annot']['strelka_bed']
+    nanosv_bed = config['develop_in']['annot']['nanosv_bed']
+        
 # WHICH CALLERS TO RUN?
 callers = {
     'gatk', 'freebayes', 'strelka', 'sniffles', 'longshot', 'clair', 'nanosv',
     'nanopolish'
 }
 callers.remove('nanopolish') # TODO: remove this!
+callers.remove('gatk') # TODO: remove this!
+callers.remove('clair') # TODO: remove this!
 if config['callers']:
     # double check that the user isn't asking for callers that we can't run
     if not callers.issuperset(config['callers']):
@@ -51,7 +56,7 @@ rule download_data:
 rule longshot:
     input:
         bam = lambda wildcards: reads[wildcards.tech],
-        ref = config['ref']
+        ref = ref
     output:
         vcf = out+"/{tech}/variants/longshot.vcf.gz"
     log:
@@ -65,7 +70,7 @@ rule longshot:
 rule clair:
     input:
         bam = lambda wildcards: reads[wildcards.tech],
-        ref = config['ref']
+        ref = ref
     output:
         vcf = out+"/{tech}/variants/clair.vcf.gz"
     log:
@@ -83,7 +88,7 @@ rule clair:
         COMMAND=mktemp 
         CLAIR=$(which clair.py)
         
-        python clair.py callVarBamParallel \
+        python $CLAIR callVarBamParallel \
         --chkpnt_fn "{params.model}" \
         --ref_fn "{input.ref}" \
         --bam_fn "{input.bam}" \
@@ -104,11 +109,12 @@ rule clair:
 rule nanosv:
     input:
         bam = lambda wildcards: reads[wildcards.tech],
+        bed = nanosv_bed
     output:
         vcf = out+"/{tech}/variants/nanosv.vcf.gz"
     params:
         output_prefix = "NA12878_ont", 
-        sample_name = "NA12878_ont",
+        sample_name = "NA12878_ont"
     log:
         "logs/nanosv_{tech}.log"
     benchmark:
@@ -117,14 +123,14 @@ rule nanosv:
     threads: 2
     shell:
         """
-        NanoSV -t {threads} -s $(which samtools) {input.bam} -o {output.vcf} 2> {log}
+        NanoSV -t {threads} -s $(which samtools) -b {input.bed} {input.bam} -o {output.vcf} 2> {log}
         """
 
 rule nanopolish:
     input:
 #        fq = lambda wildcards: {something}[wildcards.tech], # need to download fastq files!!
         bam = lambda wildcards: reads[wildcards.tech],
-        ref = config['ref']
+        ref = ref
     output:
         vcf = out+"/{tech}/variants/nanopolish.vcf.gz"
     log:
@@ -144,21 +150,22 @@ rule gatk:
     input:
         # single or list of bam files
         bam = lambda wildcards: reads[wildcards.tech],
-        ref = config['ref']
+        ref = ref
     output:
-        vcf = out+"/{tech}/variants/gatk.vcf.gz"
+        gvcf = out+"/{tech}/variants/gatk.vcf.gz"
     log:
         "logs/gatk_{tech}.log"
+    params:
+        extra="",  # optional
+        java_opts="-Xmx2G -XX:ParallelGCThreads=2", # 2 threads, 2Gb memory
     benchmark:
         "bench/gatk_{tech}.tsv"
-    resources:
-        mem_mb=1024 #Not sure if we need this .. 
     wrapper:
         "0.74.0/bio/gatk/haplotypecaller"
 
 rule freebayes:
     input:
-        ref=config['ref'],
+        ref=ref,
         samples = lambda wildcards: reads[wildcards.tech],
         # the matching BAI indexes have to present for freebayes
         indexes = lambda wildcards: reads[wildcards.tech]+".bai"
@@ -181,8 +188,8 @@ rule prepare_strelka:
         # the required bam file
         bam = lambda wildcards: reads[wildcards.tech],
         # path to reference genome fasta and index
-        fasta = config['ref'],
-        fasta_index = config['ref']+'.fai'
+        fasta = ref,
+        fasta_index = ref+'.fai'
     output:
         # Strelka results - either use directory or complete file path
         dir = directory(out+"/{tech}/variants/strelka")
@@ -192,7 +199,7 @@ rule prepare_strelka:
         "bench/strelka_{tech}.tsv"
     params:
         # optional parameters
-        config_extra="",
+        config_extra="--callRegions "+strelka_bed,
         run_extra=""
     threads: 2
     wrapper:

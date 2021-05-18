@@ -9,7 +9,7 @@
 # Path to directory in which to store the input data for the pipeline
 # The input data will be downloaded to this directory if it does not exist
 # Defaults to "data" if not specified
-data_dir: ../teams/CSE284_SP21_A00/team2/data
+data_dir: ../teams/CSE284_SP21_A00/team2/test_data
 
 # Path to the directory in which to store all output of the pipeline
 # Defaults to "results" if not specified
@@ -27,7 +27,7 @@ truth: /datasets/cs284-sp21-A00-public/ps4/HG001_GRCh38_GIAB_highconf_CG-IllFB-I
 # Path to the fasta file for the hg38 ref genome
 # An index (.fai) file with the same filename must exist in the same directory
 # required
-ref: /datasets/cs284-sp21-A00-public/ps4/GRCh38_full_analysis_set_plus_decoy_hla.fa
+
 
 # Are we in development mode?
 # If this option is set to true, the pipeline will use the input data in "development"
@@ -39,7 +39,13 @@ develop: true
 # "illumina" refers to a CRAM file containing short-read, illumina reads
 # "ont" refers to a BAM file containing long reads for a single chromosme sequenced
 #       using Oxford Nanopore
+
 # Note: each file must have a corresponding index in the same directory
 develop_in:
-    illumina: ../teams/CSE284_SP21_A00/team2/NA12878.alt_bwamem_GRCh38DH.20150706.CEU.illumina_platinum_ped_chr22.bam
-    ont: /datasets/cs284-sp21-A00-public/ps4/NA12878_chr22_ONT.sorted.bam
+    tech:
+        illumina: ../teams/CSE284_SP21_A00/team2/test_data/illumina/NA12878.alt_bwamem_GRCh38DH.20150706.CEU.illumina_platinum_ped_chr22.bam
+        ont: ../teams/CSE284_SP21_A00/team2/test_data/ont/NA12878_chr22_ONT.sorted.bam
+    annot:
+        ref: ../teams/CSE284_SP21_A00/team2/ref/GRCh38_full_analysis_set_plus_decoy_hla.fa
+        strelka_bed: ../teams/CSE284_SP21_A00/team2/ref/chr22.bed.gz
+        nanosv_bed: ../teams/CSE284_SP21_A00/team2/ref/hg38_nanosv.bed
