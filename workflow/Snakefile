@@ -25,7 +25,7 @@ if config['develop']:
 # WHICH CALLERS TO RUN?
 callers = {
     'gatk', 'freebayes', 'strelka', 'sniffles', 'longshot', 'clair', 'nanosv',
-    'nanopolish'
+    'nanopolish', 'picky'
 }
 callers.remove('nanopolish') # TODO: remove this!
 callers.remove('gatk') # TODO: remove this!
@@ -66,6 +66,28 @@ rule longshot:
     conda: "envs/longshot.yaml"
     shell:
         "longshot --bam {input.bam} --ref {input.ref} --out {output.vcf} 2> {log}"
+
+rule picky:
+    input:
+        bam = lambda wildcards: reads[wildcards.tech],
+        ref = config['ref']
+    output:
+        vcf = out+"/{tech}/variants/picky.vcf.gz",
+        dir = directory(out+"/{tech}/variants/picky")
+    log:
+        "logs/longshot_{tech}.log"
+    benchmark:
+        "bench/longshot_{tech}.tsv"
+    conda: "envs/longshot.yaml"
+    shell:
+        """
+        mkdir -p {output.dir} && \
+        samtools view -h {input.bam} | picky.pl sam2align | picky.pl callSV --oprefix {output.dir}/ && \
+        picky.pl xls2vcf --xls {output.dir}/.profile.DEL.xls --xls {output.dir}/.profile.INS.xls \
+        --xls {output.dir}/.profile.INDEL.xls --xls {output.dir}/.profile.INV.xls --xls \
+        {output.dir}/.profile.TTLC.xls --xls {output.dir}/.profile.TDSR.xls --xls \
+        {output.dir}/.profile.TDC.xls | gzip > {output.vcf}
+        """
 
 rule clair:
     input:
