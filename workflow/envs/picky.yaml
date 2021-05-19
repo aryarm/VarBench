@@ -2,4 +2,4 @@ channels:
   - conda-forge
 dependencies:
   - bioconda::samtools==1.12
-  - aryarm::picky==0.2a.1
+  - aryarm::picky-sv==0.2a.1
