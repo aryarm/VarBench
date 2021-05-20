@@ -46,6 +46,6 @@ snakemake \
 --use-conda \
 --conda-frontend conda \
 -k \
--j 32 \
+-j 2 \
 "$@" 2>>"$out_path/log" >>"$out_path/qlog"
 

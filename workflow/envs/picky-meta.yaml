@@ -1,0 +1,21 @@
+# conda install -c conda-forge -c aryarm picky-sv
+
+package:
+  name: picky-sv
+  version: 0.2a.1
+
+source:
+  git_rev: 34b85ac77d17b192b04b888ca41f3e4ed7add90c
+  git_url: https://github.com/TheJacksonLaboratory/Picky
+
+requirements:
+  run:
+    - perl
+
+build:
+  script: 'mkdir -p "$PREFIX"/bin && cp src/* "$PREFIX"/bin/'
+
+about:
+  home: https://github.com/TheJacksonLaboratory/Picky/wiki
+  license_file: LICENSE.txt
+  summary: Structural Variants Pipeline for Long Reads

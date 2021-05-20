@@ -25,10 +25,10 @@ if config['develop']:
 # WHICH CALLERS TO RUN?
 callers = {
     'gatk', 'freebayes', 'strelka', 'sniffles', 'longshot', 'clair', 'nanosv',
-    'nanopolish'
+    'nanopolish', 'picky'
 }
 callers.remove('nanopolish') # TODO: remove this!
-callers.remove('gatk') # TODO: remove this!
+callers.remove('gatk')
 callers.remove('clair') # TODO: remove this!
 if config['callers']:
     # double check that the user isn't asking for callers that we can't run
@@ -66,6 +66,26 @@ rule longshot:
     conda: "envs/longshot.yaml"
     shell:
         "longshot --bam {input.bam} --ref {input.ref} --out {output.vcf} 2> {log}"
+
+rule picky:
+    input:
+        bam = lambda wildcards: reads[wildcards.tech],
+        ref = ref
+    output:
+        vcf = out+"/{tech}/variants/picky.vcf.gz",
+        dir = directory(out+"/{tech}/variants/picky")
+    log:
+        "logs/picky_{tech}.log"
+    benchmark:
+        "bench/picky_{tech}.tsv"
+    conda: "envs/picky.yaml"
+    shell:
+        "mkdir -p {output.dir} && "
+        "samtools sort -O sam -n {input.bam} | picky.pl sam2align | picky.pl callSV --oprefix {output.dir}/ && "
+        "picky.pl xls2vcf --xls {output.dir}/.profile.DEL.xls --xls {output.dir}/.profile.INS.xls "
+        "--xls {output.dir}/.profile.INDEL.xls --xls {output.dir}/.profile.INV.xls --xls "
+        "{output.dir}/.profile.TTLC.xls --xls {output.dir}/.profile.TDSR.xls --xls "
+        "{output.dir}/.profile.TDC.xls | gzip > {output.vcf}"
 
 rule clair:
     input:
@@ -148,20 +168,19 @@ rule nanopolish:
 
 rule gatk:
     input:
-        # single or list of bam files
         bam = lambda wildcards: reads[wildcards.tech],
         ref = ref
     output:
-        gvcf = out+"/{tech}/variants/gatk.vcf.gz"
+        vcf = out+"/{tech}/variants/gatk.vcf.gz"
+    params:
+        filter = lambda wildcards: "--read-filter AllowAllReadsReadFilter --disable-tool-default-read-filters" if wildcards.tech == 'ont' else ""
     log:
         "logs/gatk_{tech}.log"
-    params:
-        extra="",  # optional
-        java_opts="-Xmx2G -XX:ParallelGCThreads=2", # 2 threads, 2Gb memory
     benchmark:
         "bench/gatk_{tech}.tsv"
-    wrapper:
-        "0.74.0/bio/gatk/haplotypecaller"
+    conda: "envs/gatk.yaml"
+    shell:
+        "gatk HaplotypeCaller {params.filter} -R {input.ref} -I {input.bam} -O {output.vcf}"
 
 rule freebayes:
     input:
@@ -231,10 +250,10 @@ rule sniffles:
 
 rule happy:
     input:
-        truth=config['truth'],
-        query = out+"/{tech}/variants/{caller}.vcf.gz"
-        genome=config['ref'],
-        genome_index=config['ref']+".fai"
+        truth = config['truth'],
+        query = out+"/{tech}/variants/{caller}.vcf.gz",
+        genome = ref,
+        genome_index = ref+".fai"
     output:
         multiext(out+"/{tech}/happy/{caller}",".runinfo.json",".vcf.gz",".summary.csv",
                 ".extended.csv",".metrics.json.gz",".roc.all.csv.gz",
@@ -245,6 +264,6 @@ rule happy:
         prefix=lambda wc, input, output: output[0].split('.')[0],
         ## parameters such as -L to left-align variants
         extra="--verbose"
-    log: "happy.log"
+    log: "logs/{tech}/happy/{caller}.log"
     threads: 2
     wrapper: "0.74.0/bio/hap.py/hap.py"

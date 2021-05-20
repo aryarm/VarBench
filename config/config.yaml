@@ -39,7 +39,7 @@ develop: true
 # "illumina" refers to a CRAM file containing short-read, illumina reads
 # "ont" refers to a BAM file containing long reads for a single chromosme sequenced
 #       using Oxford Nanopore
-
+# "ref" is the fasta file for the hg38 ref genome
 # Note: each file must have a corresponding index in the same directory
 develop_in:
     tech:
