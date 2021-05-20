@@ -28,7 +28,7 @@ callers = {
     'nanopolish', 'picky'
 }
 callers.remove('nanopolish') # TODO: remove this!
-callers.remove('gatk') # TODO: remove this!
+callers.remove('gatk')
 callers.remove('clair') # TODO: remove this!
 if config['callers']:
     # double check that the user isn't asking for callers that we can't run
@@ -168,20 +168,17 @@ rule nanopolish:
 
 rule gatk:
     input:
-        # single or list of bam files
         bam = lambda wildcards: reads[wildcards.tech],
         ref = ref
     output:
-        gvcf = out+"/{tech}/variants/gatk.vcf.gz"
+        vcf = out+"/{tech}/variants/gatk.vcf.gz"
     log:
         "logs/gatk_{tech}.log"
-    params:
-        extra="",  # optional
-        java_opts="-Xmx2G -XX:ParallelGCThreads=2", # 2 threads, 2Gb memory
     benchmark:
         "bench/gatk_{tech}.tsv"
-    wrapper:
-        "0.74.0/bio/gatk/haplotypecaller"
+    conda: "envs/gatk.yaml"
+    shell:
+        "gatk HaplotypeCaller --read-filter AllowAllReadsReadFilter --disable-tool-default-read-filters -R {input.ref} -I {input.bam} -O {output.vcf}"
 
 rule freebayes:
     input:
