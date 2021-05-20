@@ -172,13 +172,15 @@ rule gatk:
         ref = ref
     output:
         vcf = out+"/{tech}/variants/gatk.vcf.gz"
+    params:
+        filter = lambda wildcards: "--read-filter AllowAllReadsReadFilter --disable-tool-default-read-filters" if wildcards.tech == 'ont' else ""
     log:
         "logs/gatk_{tech}.log"
     benchmark:
         "bench/gatk_{tech}.tsv"
     conda: "envs/gatk.yaml"
     shell:
-        "gatk HaplotypeCaller --read-filter AllowAllReadsReadFilter --disable-tool-default-read-filters -R {input.ref} -I {input.bam} -O {output.vcf}"
+        "gatk HaplotypeCaller {params.filter} -R {input.ref} -I {input.bam} -O {output.vcf}"
 
 rule freebayes:
     input:
