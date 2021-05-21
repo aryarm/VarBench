@@ -25,12 +25,11 @@ if config['develop']:
         
 # WHICH CALLERS TO RUN?
 callers = {
-    'gatk', 'freebayes', 'strelka', 'sniffles', 'longshot', 'clair', 'nanosv',
-    'nanopolish', 'picky'
+    'gatk', 'freebayes', 'strelka', 'sniffles', 'longshot', 'nanosv',
+    'nanopolish', 'picky','clair3'
 }
 callers.remove('nanopolish') # TODO: remove this!
 callers.remove('gatk')
-callers.remove('clair') # TODO: remove this!
 if config['callers']:
     # double check that the user isn't asking for callers that we can't run
     if not callers.issuperset(config['callers']):
@@ -87,46 +86,51 @@ rule picky:
         "--xls {output.dir}/.profile.INDEL.xls --xls {output.dir}/.profile.INV.xls --xls "
         "{output.dir}/.profile.TTLC.xls --xls {output.dir}/.profile.TDSR.xls --xls "
         "{output.dir}/.profile.TDC.xls | gzip > {output.vcf}"
+        
+rule prepare_clair3:
+    output:
+        directory("resources/Clair3/models")
+    shell:
+        """
+        cd resources
+        # clone Clair3
+        git clone https://github.com/HKU-BAL/Clair3.git
+        cd Clair3
 
-rule clair:
+        # download pre-trained models
+        mkdir models
+        wget http://www.bio8.cs.hku.hk/clair3/clair3_models/clair3_models.tar.gz 
+        tar -zxvf clair3_models.tar.gz -C ./models
+        """
+
+rule clair3:
     input:
+        modeldir = rules.prepare_clair3.output,
         bam = lambda wildcards: reads[wildcards.tech],
         ref = ref
     output:
-        vcf = out+"/{tech}/variants/clair.vcf.gz"
+        vcf = out+"/{tech}/variants/clair3.vcf.gz"
     log:
-        "logs/clair_{tech}.log"
+        "logs/clair3_{tech}.log"
     benchmark:
-        "bench/clair_{tech}.tsv"
+        "bench/clair3_{tech}.tsv"
     params:
-        model = "resources/clair_models/ont",
-        output_prefix = out+"/{tech}/variants", 
-        sample_name = "{tech}"
-    conda: "envs/clair.yaml"
+        model_prefix = "models/ont",
+        output_prefix = out+"/{tech}/variants"
+    conda: "envs/clair3.yaml"
     threads: 2
     shell:
         """
-        COMMAND=mktemp 
-        CLAIR=$(which clair.py)
+        cd resources/Clair3
         
-        python $CLAIR callVarBamParallel \
-        --chkpnt_fn "{params.model}" \
-        --ref_fn "{input.ref}" \
-        --bam_fn "{input.bam}" \
-        --threshold 0.2 \ # what is this?
-        --sampleName "{params.sample_name}" \ 
-        --output_prefix "{params.output_prefix}" > $COMMAND 2> {log}
-        
-        # run Clair with 4 concurrencies
-        cat $COMMAND | parallel -j{threads} 2>> {log}
-        
-        # Find incomplete VCF files and rerun them
-        for i in {params.output_prefix}.*.vcf; do if ! [ -z "$(tail -c 1 "$i")" ]; then echo "$i"; fi ; done | grep -f - $COMMAND | sh 2>> {log}
-        
-        # concatenate vcf files and sort the variants called
-        vcfcat {params.output_prefix}.*.vcf | bcftools sort -m 2G | bgziptabix snp_and_indel.vcf.gz 2>> {log}
+        /.run_clair3.sh \
+        --ref_fn="{input.ref}" \
+        --bam_fn="{input.bam}" \
+        --threads={threads} \
+        --model_path="{params.model_prefix}" \
+        --output="{params.output_prefix}"
         """
-        
+
 rule nanosv:
     input:
         bam = lambda wildcards: reads[wildcards.tech],
