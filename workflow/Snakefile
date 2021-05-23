@@ -25,7 +25,7 @@ if config['develop']:
         
 # WHICH CALLERS TO RUN?
 callers = {
-    'gatk', 'freebayes', 'strelka', 'sniffles', 'longshot', 'nanosv',
+    'gatk', 'freebayes', 'sniffles', 'longshot', 'nanosv',
     'nanopolish', 'picky','clair3'
 }
 callers.remove('nanopolish') # TODO: remove this!
@@ -205,45 +205,7 @@ rule freebayes:
         normalize=False,  # flag to use bcftools norm to normalize indels
     threads: 2
     wrapper:
-        "0.74.0/bio/freebayes"
-
-rule strelka:
-    input:
-        # the required bam file
-        bam = lambda wildcards: reads[wildcards.tech],
-        # path to reference genome fasta and index
-        ref = ref
-    output:
-        vcf = out+"/{tech}/variants/strelka.vcf.gz"
-    conda:
-        "envs/strelka.yaml"
-    threads: 2
-    log:
-        "logs/strelka_{tech}.log"
-    benchmark:
-        "bench/strelka_{tech}.tsv"
-    shell:
-        """
-        analysisDir=$(dirname {output})
-        cmd="configureStrelkaGermlineWorkflow.py \
-        --bam='{input.bam}' \
-        --referenceFasta='{input.ref}' \
-        --callMemMb=1024 \
-        --disableSequenceErrorEstimation \
-        --runDir=$analysisDir"
-
-        echo "**** Starting configuration and run." 1>&2
-        echo "**** Configuration cmd: '$cmd'" 1>&2
-        echo 1>&2
-        eval $cmd
-
-        cmd="$analysisDir/runWorkflow.py -m local -j {threads} -g 4"
-        echo 1>&2
-        echo "**** Starting workflow execution." 1>&2
-        echo "**** Workflow cmd: '$cmd'" 1>&2
-        echo 1>&2
-        $cmd
-        """
+        "0.74.0/bio/freebayes"r
 
 rule sniffles:
     input:
