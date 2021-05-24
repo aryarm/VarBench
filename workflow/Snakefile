@@ -218,16 +218,33 @@ rule sniffles:
         "bench/sniffles_{tech}.tsv"
     conda: "envs/sniffles.yaml"
     shell: 
-        "sniffles -m {input.bam} -v {output.vcf} 2> {log}"
+        "sniffles -m {input.bam} -v {output.vcf} 2> {log}"        
+        
+rule index_vcf:
+    input:
+        vcf = out+"/{tech}/variants/{caller}.vcf.gz" 
+    output:
+        vcf = out+"/{tech}/variants/{caller}.bgzp.vcf.gz",
+        idx = out+"/{tech}/variants/{caller}.bgzp.vcf.gz.tbi"
+    log:
+        "logs/index/{caller}_{tech}.log"
+    benchmark:
+        "bench/index/{caller}_{tech}.tsv"
+    conda: "envs/happy.yaml"
+    shell:
+        "gzip -c -q -d -f {input.vcf} | bgzip > {output.vcf} && "
+        "tabix -p vcf {output.vcf} 2> {log}"
+        
 
 rule happy:
     input:
         truth = config['truth'],
-        query = out+"/{tech}/variants/{caller}.vcf.gz",
+        query = rules.index_vcf.output.vcf, 
+        query_idx = rules.index_vcf.output.idx,
         genome = ref,
         genome_index = ref+".fai"
     output:
-        multiext(out+"/{tech}/happy/{caller}",".runinfo.json",".vcf.gz",".summary.csv",
+        multiext(out+"/{tech}/happy/{caller}/",".runinfo.json",".vcf.gz",".summary.csv",
                 ".extended.csv",".metrics.json.gz",".roc.all.csv.gz",
                 ".roc.Locations.INDEL.csv.gz",".roc.Locations.INDEL.PASS.csv.gz",
                 ".roc.Locations.SNP.csv.gz",".roc.tsv")
@@ -236,9 +253,14 @@ rule happy:
         prefix=lambda wc, input, output: output[0].split('.')[0],
         ## parameters such as -L to left-align variants
         extra="--verbose"
-    log: "logs/{tech}/happy/{caller}.log"
+    log: "logs/{tech}/happy_{caller}.log"
     threads: 2
-    wrapper: "0.74.0/bio/hap.py/hap.py"
+    benchmark:
+        "bench/{tech}/happy_{caller}.tsv"
+    conda: "envs/happy.yaml"
+    shell: 
+        "hap.py --threads {threads} --engine {params.engine} -r {input.genome} {params.extra} -o {params.prefix} {input.truth} {input.query} 2> {log}"
+
 
 rule prepare_wittyer:
     output:
