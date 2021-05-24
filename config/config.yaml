@@ -19,6 +19,16 @@ out: results
 # Defaults to all if this option is set to a false value
 callers: false
 
+# Which field in each caller's VCF contains genotype scores?
+# This information is useful for creating precision-recall curves
+# You can specify null if the caller does not output a scoring field
+# If not specified (or falsey), this will default to GQX (or GQ, otherwise)
+caller_score:
+    picky: null
+    sniffles: null
+    cutesv: null # GQ exists but it's empty -__-
+    longshot: false
+
 # Path to a gzipped VCF containing known, high-confidence variants for NA12878
 # An index (.tbi) file with the same filename must exist in the same directory
 # required
@@ -27,7 +37,7 @@ truth: /datasets/cs284-sp21-A00-public/ps4/HG001_GRCh38_GIAB_highconf_CG-IllFB-I
 # Path to the fasta file for the hg38 ref genome
 # An index (.fai) file with the same filename must exist in the same directory
 # required
-
+ref: ../teams/CSE284_SP21_A00/team2/ref/GRCh38_full_analysis_set_plus_decoy_hla.fa
 
 # Are we in development mode?
 # If this option is set to true, the pipeline will use the input data in "development"
@@ -53,6 +63,5 @@ full_run:
         illumina: ../teams/CSE284_SP21_A00/team2/data/illumina/RMNISTHS_30xdownsample.bam
         pacbio: ../teams/CSE284_SP21_A00/team2/data/pacbio/sorted_final_merged.bam
 
-ref: ../teams/CSE284_SP21_A00/team2/ref/GRCh38_full_analysis_set_plus_decoy_hla.fa
 nanosv_bed: ../teams/CSE284_SP21_A00/team2/ref/hg38_nanosv.bed
 wittyer_config: config/wittyer_config.json
