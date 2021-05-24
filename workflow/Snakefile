@@ -24,11 +24,12 @@ ref = config['ref']
 
 # WHICH CALLERS TO RUN?
 callers = {
-    'gatk', 'freebayes' , 'sniffles', 'longshot', 'nanosv', 'nanopolish', 'picky','clair3'
+    'gatk', 'freebayes' , 'sniffles', 'longshot', 'nanosv', 'nanopolish', 'picky',
+    'clair3', 'cutesv', 'strelka'
 }
 callers.remove('nanopolish') # TODO: remove this!
-callers.remove('gatk')
-
+callers.remove('gatk') # TODO: remove this!
+callers.remove('strelka') # TODO: remove this!
 if config['callers']:
     # double check that the user isn't asking for callers that we can't run
     if not callers.issuperset(config['callers']):
@@ -221,11 +222,25 @@ rule sniffles:
         "bench/sniffles_{tech}.tsv"
     conda: "envs/sniffles.yaml"
     shell: 
-        "sniffles -m {input.bam} -v {output.vcf} 2> {log}"        
+        "sniffles -m {input.bam} -v {output.vcf} 2> {log}"
+
+rule cutesv:
+    input:
+        bam = lambda wildcards: reads[wildcards.tech],
+        ref = ref
+    output:
+        vcf = out+"/{tech}/variants/cutesv.vcf.gz"
+    log:
+        "logs/cutesv_{tech}.log"
+    benchmark:
+        "bench/cutesv_{tech}.tsv"
+    conda: "envs/cutesv.yaml"
+    shell: 
+        "cuteSV {input.bam} {input.ref} {output.vcf} ./ 2> {log}"
         
 rule index_vcf:
     input:
-        vcf = out+"/{tech}/variants/{caller}.vcf.gz" 
+        vcf = out+"/{tech}/variants/{caller}.vcf.gz"
     output:
         vcf = out+"/{tech}/variants/{caller}.bgzp.vcf.gz",
         idx = out+"/{tech}/variants/{caller}.bgzp.vcf.gz.tbi"
@@ -237,7 +252,6 @@ rule index_vcf:
     shell:
         "gzip -c -q -d -f {input.vcf} | bgzip > {output.vcf} && "
         "tabix -p vcf {output.vcf} 2> {log}"
-        
 
 rule happy:
     input:
