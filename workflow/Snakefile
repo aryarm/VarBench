@@ -205,7 +205,7 @@ rule freebayes:
         normalize=False,  # flag to use bcftools norm to normalize indels
     threads: 2
     wrapper:
-        "0.74.0/bio/freebayes"r
+        "0.74.0/bio/freebayes"
 
 rule sniffles:
     input:
@@ -218,7 +218,7 @@ rule sniffles:
         "bench/sniffles_{tech}.tsv"
     conda: "envs/sniffles.yaml"
     shell: 
-        "sniffles -m {input.bam} -v {output.vcf} 2> {log}"        
+        "sniffles -m {input.bam} -v {output.vcf} 2> {log} && sed -i 's/STRANDBIAS/PASS/' {output.vcf}"        
         
 rule index_vcf:
     input:
@@ -230,9 +230,9 @@ rule index_vcf:
         "logs/index/{caller}_{tech}.log"
     benchmark:
         "bench/index/{caller}_{tech}.tsv"
-    conda: "envs/happy.yaml"
+    conda: "envs/default.yaml"
     shell:
-        "gzip -c -q -d -f {input.vcf} | bgzip > {output.vcf} && "
+        "gzip -c -q -d -f {input.vcf} | bcftools sort -O v | bgzip > {output.vcf} && "
         "tabix -p vcf {output.vcf} 2> {log}"
         
 
@@ -244,7 +244,7 @@ rule happy:
         genome = ref,
         genome_index = ref+".fai"
     output:
-        multiext(out+"/{tech}/happy/{caller}/",".runinfo.json",".vcf.gz",".summary.csv",
+        multiext(out+"/{tech}/happy/{caller}/{caller}",".runinfo.json",".vcf.gz",".summary.csv",
                 ".extended.csv",".metrics.json.gz",".roc.all.csv.gz",
                 ".roc.Locations.INDEL.csv.gz",".roc.Locations.INDEL.PASS.csv.gz",
                 ".roc.Locations.SNP.csv.gz",".roc.tsv")
@@ -258,8 +258,8 @@ rule happy:
     benchmark:
         "bench/{tech}/happy_{caller}.tsv"
     conda: "envs/happy.yaml"
-    shell: 
-        "hap.py --threads {threads} --engine {params.engine} -r {input.genome} {params.extra} -o {params.prefix} {input.truth} {input.query} 2> {log}"
+    shell:
+        "hap.py --threads {threads} --engine {params.engine} -r {input.genome} {params.extra} -o {params.prefix} --roc GQX --logfile {log} {input.truth} {input.query}"
 
 
 rule prepare_wittyer:
