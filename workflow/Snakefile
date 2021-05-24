@@ -10,26 +10,27 @@ configfile: "config/config.yaml"
 # remove any trailing slashes in directories
 out = str(Path(config['out']))
 data = str(Path(config['data_dir']))
-reads = {
-    'ont': data+"/ont/NA12878-minion-ul_GRCh38.bam",
-    'illumina': data+"/illumina/RMNISTHS_30xdownsample.bam"
-}
+reads = { }
 
 # if we're in development mode, get the reads from DataHub instead of the data dir
 if config['develop']:
     for tech in config['develop_in']['tech']:
         reads[tech] = config['develop_in']['tech'][tech]
     ref = config['develop_in']['annot']['ref']
-    strelka_bed = config['develop_in']['annot']['strelka_bed']
     nanosv_bed = config['develop_in']['annot']['nanosv_bed']
-        
+else:
+    for tech in config['full_run']['tech']:
+        reads[tech] = config['full_run']['tech'][tech]
+    ref = config['full_run']['annot']['ref']
+    nanosv_bed = config['full_run']['annot']['nanosv_bed']
+    
 # WHICH CALLERS TO RUN?
 callers = {
-    'gatk', 'freebayes' , 'sniffles', 'longshot', 'nanosv',
-    'nanopolish', 'picky','clair3'
+    'gatk', 'freebayes' , 'sniffles', 'longshot', 'nanosv', 'nanopolish', 'picky','clair3'
 }
 callers.remove('nanopolish') # TODO: remove this!
 callers.remove('gatk')
+
 if config['callers']:
     # double check that the user isn't asking for callers that we can't run
     if not callers.issuperset(config['callers']):
@@ -39,7 +40,7 @@ if config['callers']:
 rule all:
    input:
         # confusion = out+"/matrix.tsv",
-        vcfs = expand(out+"/{tech}/variants/{caller}.vcf.gz", tech = ["ont","illumina"] , caller = callers)
+        vcfs = expand(out+"/{tech}/variants/{caller}.vcf.gz", tech = reads.keys() , caller = callers)
 
 rule download_data:
     params:
