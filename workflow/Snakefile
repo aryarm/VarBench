@@ -11,9 +11,10 @@ configfile: "config/config.yaml"
 out = str(Path(config['out']))
 data = str(Path(config['data_dir']))
 reads = {
-    'ont': data+"/NA12878-minion-ul_GRCh38.bam",
-    'illumina': data+"/RMNISTHS_30xdownsample.bam"
+    'ont': data+"/ont/NA12878-minion-ul_GRCh38.bam",
+    'illumina': data+"/illumina/RMNISTHS_30xdownsample.bam"
 }
+
 # if we're in development mode, get the reads from DataHub instead of the data dir
 if config['develop']:
     for tech in config['develop_in']['tech']:
@@ -24,12 +25,11 @@ if config['develop']:
         
 # WHICH CALLERS TO RUN?
 callers = {
-    'gatk', 'freebayes', 'strelka', 'sniffles', 'longshot', 'clair', 'nanosv',
-    'nanopolish', 'picky'
+    'gatk', 'freebayes', 'sniffles', 'longshot', 'nanosv',
+    'nanopolish', 'picky','clair3'
 }
 callers.remove('nanopolish') # TODO: remove this!
 callers.remove('gatk')
-callers.remove('clair') # TODO: remove this!
 if config['callers']:
     # double check that the user isn't asking for callers that we can't run
     if not callers.issuperset(config['callers']):
@@ -86,46 +86,51 @@ rule picky:
         "--xls {output.dir}/.profile.INDEL.xls --xls {output.dir}/.profile.INV.xls --xls "
         "{output.dir}/.profile.TTLC.xls --xls {output.dir}/.profile.TDSR.xls --xls "
         "{output.dir}/.profile.TDC.xls | gzip > {output.vcf}"
+        
+rule prepare_clair3:
+    output:
+        directory("resources/Clair3/models")
+    shell:
+        """
+        cd resources
+        # clone Clair3
+        git clone https://github.com/HKU-BAL/Clair3.git
+        cd Clair3
 
-rule clair:
+        # download pre-trained models
+        mkdir models
+        wget http://www.bio8.cs.hku.hk/clair3/clair3_models/clair3_models.tar.gz 
+        tar -zxvf clair3_models.tar.gz -C ./models
+        """
+
+rule clair3:
     input:
+        modeldir = rules.prepare_clair3.output,
         bam = lambda wildcards: reads[wildcards.tech],
         ref = ref
     output:
-        vcf = out+"/{tech}/variants/clair.vcf.gz"
+        vcf = out+"/{tech}/variants/clair3.vcf.gz"
     log:
-        "logs/clair_{tech}.log"
+        "logs/clair3_{tech}.log"
     benchmark:
-        "bench/clair_{tech}.tsv"
+        "bench/clair3_{tech}.tsv"
     params:
-        model = "resources/clair_models/ont",
-        output_prefix = out+"/{tech}/variants", 
-        sample_name = "{tech}"
-    conda: "envs/clair.yaml"
+        model_prefix = "models/ont",
+        output_prefix = out+"/{tech}/variants"
+    conda: "envs/clair3.yaml"
     threads: 2
     shell:
         """
-        COMMAND=mktemp 
-        CLAIR=$(which clair.py)
+        cd resources/Clair3
         
-        python $CLAIR callVarBamParallel \
-        --chkpnt_fn "{params.model}" \
-        --ref_fn "{input.ref}" \
-        --bam_fn "{input.bam}" \
-        --threshold 0.2 \ # what is this?
-        --sampleName "{params.sample_name}" \ 
-        --output_prefix "{params.output_prefix}" > $COMMAND 2> {log}
-        
-        # run Clair with 4 concurrencies
-        cat $COMMAND | parallel -j{threads} 2>> {log}
-        
-        # Find incomplete VCF files and rerun them
-        for i in {params.output_prefix}.*.vcf; do if ! [ -z "$(tail -c 1 "$i")" ]; then echo "$i"; fi ; done | grep -f - $COMMAND | sh 2>> {log}
-        
-        # concatenate vcf files and sort the variants called
-        vcfcat {params.output_prefix}.*.vcf | bcftools sort -m 2G | bgziptabix snp_and_indel.vcf.gz 2>> {log}
+        /.run_clair3.sh \
+        --ref_fn="{input.ref}" \
+        --bam_fn="{input.bam}" \
+        --threads={threads} \
+        --model_path="{params.model_prefix}" \
+        --output="{params.output_prefix}"
         """
-        
+
 rule nanosv:
     input:
         bam = lambda wildcards: reads[wildcards.tech],
@@ -200,40 +205,7 @@ rule freebayes:
         normalize=False,  # flag to use bcftools norm to normalize indels
     threads: 2
     wrapper:
-        "0.74.0/bio/freebayes"
-
-rule prepare_strelka:
-    input:
-        # the required bam file
-        bam = lambda wildcards: reads[wildcards.tech],
-        # path to reference genome fasta and index
-        fasta = ref,
-        fasta_index = ref+'.fai'
-    output:
-        # Strelka results - either use directory or complete file path
-        dir = directory(out+"/{tech}/variants/strelka")
-    log:
-        "logs/strelka_{tech}.log"
-    benchmark:
-        "bench/strelka_{tech}.tsv"
-    params:
-        # optional parameters
-        config_extra="--callRegions "+strelka_bed,
-        run_extra=""
-    threads: 2
-    wrapper:
-        "0.74.0/bio/strelka/germline"
-
-rule strelka:
-    input:
-        dir = out+"/{tech}/variants/strelka"
-    params:
-        vcf = lambda wildcards, input: input.dir+"/results/variants/genome.S1.vcf"
-    output:
-        vcf = out+"/{tech}/variants/strelka.vcf.gz"
-    conda: "envs/default.yaml"
-    shell:
-        "ln -s {params.vcf} {output.vcf}"
+        "0.74.0/bio/freebayes"r
 
 rule sniffles:
     input:
@@ -288,3 +260,32 @@ rule happy:
     conda: "envs/happy.yaml"
     shell: 
         "hap.py --threads {threads} --engine {params.engine} -r {input.genome} {params.extra} -o {params.prefix} {input.truth} {input.query} 2> {log}"
+
+
+rule prepare_wittyer:
+    output:
+        directory("resources/witty.er/Wittyer")
+    conda: "envs/dotnet.yaml"
+    shell:
+        """
+        # clone repo
+        git clone https://github.com/Illumina/witty.er.git
+        
+        # compile the repo
+        cd  witty.er/Wittyer
+        dotnet publish . -c Release
+        """
+        
+rule wittyer:
+    input:
+        witty_dir = rules.prepare_wittyer.output,
+        truth = config['truth'],
+        query = out+"/{tech}/variants/{caller}.vcf.gz"
+    conda: "envs/dotnet.yaml"
+    shell:
+        """
+        cd {input.witty_dir}
+        
+        # run the dll
+        dotnet bin/Release/netcoreapp2.0/Wittyer.dll -i {input.query} -t {input.truth} -o out
+        """
