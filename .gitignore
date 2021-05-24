@@ -122,6 +122,11 @@ venv.bak/
 # Rope project settings
 .ropeproject
 
+# Rstudio stuff
+*.Rproj
+*.Rprofile
+renv/
+
 # mkdocs documentation
 /site
 
@@ -132,3 +137,4 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+.Rproj.user
