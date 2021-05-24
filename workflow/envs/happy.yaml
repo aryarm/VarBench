@@ -1,0 +1,4 @@
+dependencies:
+  - bioconda::hap.py==0.3.14
+  - bioconda::rtg-tools==3.12.1
+  
