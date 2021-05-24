@@ -16,14 +16,12 @@ reads = { }
 if config['develop']:
     for tech in config['develop_in']['tech']:
         reads[tech] = config['develop_in']['tech'][tech]
-    ref = config['develop_in']['annot']['ref']
-    nanosv_bed = config['develop_in']['annot']['nanosv_bed']
 else:
     for tech in config['full_run']['tech']:
         reads[tech] = config['full_run']['tech'][tech]
-    ref = config['full_run']['annot']['ref']
-    nanosv_bed = config['full_run']['annot']['nanosv_bed']
-    
+
+ref = config['ref']
+
 # WHICH CALLERS TO RUN?
 callers = {
     'gatk', 'freebayes' , 'sniffles', 'longshot', 'nanosv', 'nanopolish', 'picky','clair3'
@@ -66,7 +64,11 @@ rule longshot:
         "bench/longshot_{tech}.tsv"
     conda: "envs/longshot.yaml"
     shell:
-        "longshot --bam {input.bam} --ref {input.ref} --out {output.vcf} 2> {log}"
+        """
+        # -A = Automatically calculate mean coverage for region and set max coverage to mean_coverage + 5*sqrt(mean_coverage)
+        # -y = Minimum quality (Phred-scaled) of read->haplotype assignment (for read separation). [default: 20.0]
+        longshot -A -y 30 --bam {input.bam} --ref {input.ref} --out {output.vcf} 2> {log}
+        """
 
 rule picky:
     input:
@@ -135,7 +137,7 @@ rule clair3:
 rule nanosv:
     input:
         bam = lambda wildcards: reads[wildcards.tech],
-        bed = nanosv_bed
+        bed = config['nanosv_bed']
     output:
         vcf = out+"/{tech}/variants/nanosv.vcf.gz"
     params:
@@ -245,7 +247,7 @@ rule happy:
         genome = ref,
         genome_index = ref+".fai"
     output:
-        multiext(out+"/{tech}/happy/{caller}/",".runinfo.json",".vcf.gz",".summary.csv",
+        multiext(out+"/{tech}/happy/{caller}/{caller}",".runinfo.json",".vcf.gz",".summary.csv",
                 ".extended.csv",".metrics.json.gz",".roc.all.csv.gz",
                 ".roc.Locations.INDEL.csv.gz",".roc.Locations.INDEL.PASS.csv.gz",
                 ".roc.Locations.SNP.csv.gz",".roc.tsv")
@@ -281,12 +283,20 @@ rule wittyer:
     input:
         witty_dir = rules.prepare_wittyer.output,
         truth = config['truth'],
-        query = out+"/{tech}/variants/{caller}.vcf.gz"
+        query = out+"/{tech}/variants/{caller}.vcf.gz",
+        config = config['wittyer_config']
+    output: 
+        dir = directory(out+"/{tech}/wittyer/{caller}")
     conda: "envs/dotnet.yaml"
     shell:
         """
         cd {input.witty_dir}
         
         # run the dll
-        dotnet bin/Release/netcoreapp2.0/Wittyer.dll -i {input.query} -t {input.truth} -o out
+        dotnet bin/Release/netcoreapp2.0/Wittyer.dll \
+            -i {input.query} \
+            -t {input.truth} \
+            --configFile {input.config} \
+            -em cts \
+            -o {output.dir}
         """
