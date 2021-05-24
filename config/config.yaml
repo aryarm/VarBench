@@ -9,7 +9,7 @@
 # Path to directory in which to store the input data for the pipeline
 # The input data will be downloaded to this directory if it does not exist
 # Defaults to "data" if not specified
-data_dir: ../teams/CSE284_SP21_A00/team2/test_data
+data_dir: ../teams/CSE284_SP21_A00/team2
 
 # Path to the directory in which to store all output of the pipeline
 # Defaults to "results" if not specified
@@ -19,6 +19,16 @@ out: results
 # Defaults to all if this option is set to a false value
 callers: false
 
+# Which field in each caller's VCF contains genotype scores?
+# This information is useful for creating precision-recall curves
+# You can specify null if the caller does not output a scoring field
+# If not specified (or falsey), this will default to GQX (or GQ, otherwise)
+caller_score:
+    picky: null
+    sniffles: null
+    cutesv: null # GQ exists but it's empty -__-
+    longshot: false
+
 # Path to a gzipped VCF containing known, high-confidence variants for NA12878
 # An index (.tbi) file with the same filename must exist in the same directory
 # required
@@ -27,7 +37,7 @@ truth: /datasets/cs284-sp21-A00-public/ps4/HG001_GRCh38_GIAB_highconf_CG-IllFB-I
 # Path to the fasta file for the hg38 ref genome
 # An index (.fai) file with the same filename must exist in the same directory
 # required
-
+ref: ../teams/CSE284_SP21_A00/team2/ref/GRCh38_full_analysis_set_plus_decoy_hla.fa
 
 # Are we in development mode?
 # If this option is set to true, the pipeline will use the input data in "development"
@@ -45,7 +55,13 @@ develop_in:
     tech:
         illumina: ../teams/CSE284_SP21_A00/team2/test_data/illumina/NA12878.alt_bwamem_GRCh38DH.20150706.CEU.illumina_platinum_ped_chr22.bam
         ont: ../teams/CSE284_SP21_A00/team2/test_data/ont/NA12878_chr22_ONT.sorted.bam
-    annot:
-        ref: ../teams/CSE284_SP21_A00/team2/ref/GRCh38_full_analysis_set_plus_decoy_hla.fa
-        strelka_bed: ../teams/CSE284_SP21_A00/team2/ref/chr22.bed.gz
-        nanosv_bed: ../teams/CSE284_SP21_A00/team2/ref/hg38_nanosv.bed
+        pacbio: ../teams/CSE284_SP21_A00/team2/test_data/pacbio/chr22_final.bam
+            
+full_run:
+    tech:
+        ont: ../teams/CSE284_SP21_A00/team2/data/ont/NA12878-minion-ul_GRCh38.bam
+        illumina: ../teams/CSE284_SP21_A00/team2/data/illumina/RMNISTHS_30xdownsample.bam
+        pacbio: ../teams/CSE284_SP21_A00/team2/data/pacbio/sorted_final_merged.bam
+
+nanosv_bed: ../teams/CSE284_SP21_A00/team2/ref/hg38_nanosv.bed
+wittyer_config: config/wittyer_config.json

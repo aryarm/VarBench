@@ -10,26 +10,26 @@ configfile: "config/config.yaml"
 # remove any trailing slashes in directories
 out = str(Path(config['out']))
 data = str(Path(config['data_dir']))
-reads = {
-    'ont': data+"/ont/NA12878-minion-ul_GRCh38.bam",
-    'illumina': data+"/illumina/RMNISTHS_30xdownsample.bam"
-}
+reads = { }
 
 # if we're in development mode, get the reads from DataHub instead of the data dir
 if config['develop']:
     for tech in config['develop_in']['tech']:
         reads[tech] = config['develop_in']['tech'][tech]
-    ref = config['develop_in']['annot']['ref']
-    strelka_bed = config['develop_in']['annot']['strelka_bed']
-    nanosv_bed = config['develop_in']['annot']['nanosv_bed']
-        
+else:
+    for tech in config['full_run']['tech']:
+        reads[tech] = config['full_run']['tech'][tech]
+
+ref = config['ref']
+
 # WHICH CALLERS TO RUN?
 callers = {
-    'gatk', 'freebayes', 'sniffles', 'longshot', 'nanosv',
-    'nanopolish', 'picky','clair3'
+    'gatk', 'freebayes' , 'sniffles', 'longshot', 'nanosv', 'nanopolish', 'picky',
+    'clair3', 'cutesv', 'strelka'
 }
 callers.remove('nanopolish') # TODO: remove this!
-callers.remove('gatk')
+callers.remove('gatk') # TODO: remove this!
+callers.remove('strelka') # TODO: remove this!
 if config['callers']:
     # double check that the user isn't asking for callers that we can't run
     if not callers.issuperset(config['callers']):
@@ -39,7 +39,7 @@ if config['callers']:
 rule all:
    input:
         # confusion = out+"/matrix.tsv",
-        vcfs = expand(out+"/{tech}/variants/{caller}.vcf.gz", tech = ["ont","illumina"] , caller = callers)
+        vcfs = expand(out+"/{tech}/variants/{caller}.vcf.gz", tech = reads.keys() , caller = callers)
 
 rule download_data:
     params:
@@ -65,7 +65,11 @@ rule longshot:
         "bench/longshot_{tech}.tsv"
     conda: "envs/longshot.yaml"
     shell:
-        "longshot --bam {input.bam} --ref {input.ref} --out {output.vcf} 2> {log}"
+        """
+        # -A = Automatically calculate mean coverage for region and set max coverage to mean_coverage + 5*sqrt(mean_coverage)
+        # -y = Minimum quality (Phred-scaled) of read->haplotype assignment (for read separation). [default: 20.0]
+        longshot -A -y 30 --bam {input.bam} --ref {input.ref} --out {output.vcf} 2> {log}
+        """
 
 rule picky:
     input:
@@ -85,7 +89,7 @@ rule picky:
         "picky.pl xls2vcf --xls {output.dir}/.profile.DEL.xls --xls {output.dir}/.profile.INS.xls "
         "--xls {output.dir}/.profile.INDEL.xls --xls {output.dir}/.profile.INV.xls --xls "
         "{output.dir}/.profile.TTLC.xls --xls {output.dir}/.profile.TDSR.xls --xls "
-        "{output.dir}/.profile.TDC.xls | gzip > {output.vcf}"
+        "{output.dir}/.profile.TDC.xls | gzip > {output.vcf} 2> {log}"
         
 rule prepare_clair3:
     output:
@@ -134,7 +138,7 @@ rule clair3:
 rule nanosv:
     input:
         bam = lambda wildcards: reads[wildcards.tech],
-        bed = nanosv_bed
+        bed = config['nanosv_bed']
     output:
         vcf = out+"/{tech}/variants/nanosv.vcf.gz"
     params:
@@ -219,10 +223,24 @@ rule sniffles:
     conda: "envs/sniffles.yaml"
     shell: 
         "sniffles -m {input.bam} -v {output.vcf} 2> {log} && sed -i 's/STRANDBIAS/PASS/' {output.vcf}"        
+
+rule cutesv:
+    input:
+        bam = lambda wildcards: reads[wildcards.tech],
+        ref = ref
+    output:
+        vcf = out+"/{tech}/variants/cutesv.vcf.gz"
+    log:
+        "logs/cutesv_{tech}.log"
+    benchmark:
+        "bench/cutesv_{tech}.tsv"
+    conda: "envs/cutesv.yaml"
+    shell: 
+        "cuteSV {input.bam} {input.ref} {output.vcf} ./ 2> {log}"
         
 rule index_vcf:
     input:
-        vcf = out+"/{tech}/variants/{caller}.vcf.gz" 
+        vcf = out+"/{tech}/variants/{caller}.vcf.gz"
     output:
         vcf = out+"/{tech}/variants/{caller}.bgzp.vcf.gz",
         idx = out+"/{tech}/variants/{caller}.bgzp.vcf.gz.tbi"
@@ -234,7 +252,6 @@ rule index_vcf:
     shell:
         "gzip -c -q -d -f {input.vcf} | bcftools sort -O v | bgzip > {output.vcf} && "
         "tabix -p vcf {output.vcf} 2> {log}"
-        
 
 rule happy:
     input:
@@ -280,12 +297,21 @@ rule wittyer:
     input:
         witty_dir = rules.prepare_wittyer.output,
         truth = config['truth'],
-        query = out+"/{tech}/variants/{caller}.vcf.gz"
+        query = rules.index_vcf.output.vcf, 
+        query_idx = rules.index_vcf.output.idx,
+        config = config['wittyer_config']
+    output: 
+        dir = directory(out+"/{tech}/wittyer/{caller}")
     conda: "envs/dotnet.yaml"
     shell:
         """
         cd {input.witty_dir}
         
         # run the dll
-        dotnet bin/Release/netcoreapp2.0/Wittyer.dll -i {input.query} -t {input.truth} -o out
+        dotnet bin/Release/netcoreapp2.0/Wittyer.dll \
+            -i {input.query} \
+            -t {input.truth} \
+            --configFile {input.config} \
+            -em cts \
+            -o {output.dir}
         """
