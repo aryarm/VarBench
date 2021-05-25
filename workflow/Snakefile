@@ -276,7 +276,7 @@ rule happy:
         "bench/{tech}/happy_{caller}.tsv"
     conda: "envs/happy.yaml"
     shell:
-        "hap.py --threads {threads} --engine {params.engine} -r {input.genome} {params.extra} -o {params.prefix} --roc GQX --logfile {log} {input.truth} {input.query}"
+        "hap.py --threads {threads} --engine {params.engine} -r {input.genome} {params.extra} -o {params.prefix} --logfile {log} {input.truth} {input.query}"
 
 
 rule prepare_wittyer:
