@@ -64,4 +64,4 @@ full_run:
         pacbio: ../teams/CSE284_SP21_A00/team2/data/pacbio/sorted_final_merged.bam
 
 nanosv_bed: ../teams/CSE284_SP21_A00/team2/ref/hg38_nanosv.bed
-wittyer_config: config/wittyer_config.json
+wittyer_config: ~/Varbench/config/wittyer_config.json

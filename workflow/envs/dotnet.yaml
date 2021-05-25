@@ -1,4 +1,4 @@
 channels:
   - conda-forge
 dependencies:
-  - conda-forge::dotnet-sdk==5.0.203
+  - conda-forge::dotnet==2.1.815
