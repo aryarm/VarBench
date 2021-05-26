@@ -29,11 +29,6 @@ caller_score:
     cutesv: null # GQ exists but it's empty -__-
     longshot: false
 
-# Path to a gzipped VCF containing known, high-confidence variants for NA12878
-# An index (.tbi) file with the same filename must exist in the same directory
-# required
-truth: /datasets/cs284-sp21-A00-public/ps4/HG001_GRCh38_GIAB_highconf_CG-IllFB-IllGATKHC-Ion-10X-SOLID_CHROM1-X_v.3.3.2_highconf_PGandRTGphasetransfer.vcf.gz
-
 # Path to the fasta file for the hg38 ref genome
 # An index (.fai) file with the same filename must exist in the same directory
 # required
@@ -50,18 +45,19 @@ develop: true
 # "ont" refers to a BAM file containing long reads for a single chromosme sequenced
 #       using Oxford Nanopore
 # "ref" is the fasta file for the hg38 ref genome
+# "truth" refers to a gzipped VCF containing known, high-confidence variants for NA12878 (required!)
 # Note: each file must have a corresponding index in the same directory
 develop_in:
     tech:
         illumina: ../teams/CSE284_SP21_A00/team2/test_data/illumina/HG001.GRCh38_full_plus_hs38d1_analysis_set_minus_alts.300x.chr22.bam
         ont: ../teams/CSE284_SP21_A00/team2/test_data/ont/NA12878-minion-ul_GRCh38.decoys.chr22.bam
         pacbio: ../teams/CSE284_SP21_A00/team2/test_data/pacbio/HG001_GRCh38.haplotag.RTG.trio.decoys.chr22.bam
-            
+    truth: ../teams/CSE284_SP21_A00/team2/data/NA12878_truth/HG001_GRCh38_GIAB_highconf_CG-IllFB-IllGATKHC-Ion-10X-SOLID_CHROM1-X_v.3.3.2_highconf_PGandRTGphasetransfer.chr22.vcf.gz
 full_run:
     tech:
         ont: ../teams/CSE284_SP21_A00/team2/data/ont/NA12878-minion-ul_GRCh38.decoys.bam
         illumina: ../teams/CSE284_SP21_A00/team2/data/illumina/RMNISTHS_30xdownsample.bam
         pacbio: ../teams/CSE284_SP21_A00/team2/data/pacbio/HG001_GRCh38.haplotag.RTG.trio.decoys.bam
-
+    truth: ../teams/CSE284_SP21_A00/team2/data/NA12878_truth/HG001_GRCh38_GIAB_highconf_CG-IllFB-IllGATKHC-Ion-10X-SOLID_CHROM1-X_v.3.3.2_highconf_PGandRTGphasetransfer.vcf.gz
 nanosv_bed: ../teams/CSE284_SP21_A00/team2/ref/hg38_nanosv.bed
 wittyer_config: ~/Varbench/config/wittyer_config.json
