@@ -2,3 +2,4 @@ dependencies:
   - bioconda::longshot==0.4.1
   - bioconda::tabix==1.11
   - conda-forge::rust==1.31.1
+  - bioconda::bcftools==1.12

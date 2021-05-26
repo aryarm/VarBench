@@ -28,7 +28,6 @@ callers = {
     'clair3', 'cutesv', 'strelka'
 }
 callers.remove('nanopolish') # TODO: remove this!
-callers.remove('gatk') # TODO: remove this!
 callers.remove('strelka') # TODO: remove this!
 if config['callers']:
     # double check that the user isn't asking for callers that we can't run
@@ -58,7 +57,8 @@ rule longshot:
         bam = lambda wildcards: reads[wildcards.tech],
         ref = ref
     output:
-        vcf = out+"/{tech}/variants/longshot.vcf.gz"
+        vcf = out+"/{tech}/variants/longshot.vcf.gz",
+        orig = out+"/{tech}/variants/longshot/orig.vcf.gz"
     log:
         "logs/longshot_{tech}.log"
     benchmark:
@@ -68,7 +68,8 @@ rule longshot:
         """
         # -A = Automatically calculate mean coverage for region and set max coverage to mean_coverage + 5*sqrt(mean_coverage)
         # -y = Minimum quality (Phred-scaled) of read->haplotype assignment (for read separation). [default: 20.0]
-        longshot -A -y 30 --bam {input.bam} --ref {input.ref} --out {output.vcf} 2> {log}
+        longshot -A -y 30 --bam {input.bam} --ref {input.ref} --out {output.orig} 2> {log}
+        bcftools reheader -f -Oz -o {output.vcf} {input.ref} {output.orig}
         """
 
 rule picky:
@@ -258,7 +259,7 @@ rule index_vcf:
 
 rule happy:
     input:
-        truth = config['truth'],
+        truth = config['develop_in']['truth'] if config['develop'] else config['full_run']['truth'],
         query = rules.index_vcf.output.vcf, 
         query_idx = rules.index_vcf.output.idx,
         genome = ref,
