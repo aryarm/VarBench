@@ -23,6 +23,7 @@ callers: false
 # This information is useful for creating precision-recall curves
 # You can specify null if the caller does not output a scoring field
 # If not specified (or falsey), this will default to GQX (or GQ, otherwise)
+# TODO: this is still not implemented in the Snakefile
 caller_score:
     picky: null
     sniffles: null
