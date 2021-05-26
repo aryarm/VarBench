@@ -119,20 +119,23 @@ rule clair3:
     benchmark:
         "bench/clair3_{tech}.tsv"
     params:
-        model_prefix = "models/ont",
-        output_prefix = out+"/{tech}/variants"
+        dev_chr = "--ctg_name="+config['develop_in']['chr'] if config['develop'] else "",
+        output_prefix = out+"/{tech}/variants",
+        platform = lambda wildcards: {"ont": "ont", "pacbio": "hifi", "illumina": "ilmn"}[wildcards.tech]
     conda: "envs/clair3.yaml"
     threads: 2
     shell:
         """
         cd resources/Clair3
         
-        /.run_clair3.sh \
-        --ref_fn="{input.ref}" \
-        --bam_fn="{input.bam}" \
+        ./run_clair3.sh \
+        --ref_fn="../../{input.ref}" \
+        --bam_fn="../../{input.bam}" \
         --threads={threads} \
-        --model_path="{params.model_prefix}" \
-        --output="{params.output_prefix}"
+        --platform={params.platform} \
+        --model_path=`pwd`"/models/{params.platform}" \
+        --output="../../{params.output_prefix}" \
+        {params.dev_chr}
         """
 
 rule nanosv:
@@ -276,7 +279,7 @@ rule happy:
         "bench/{tech}/happy_{caller}.tsv"
     conda: "envs/happy.yaml"
     shell:
-        "hap.py --threads {threads} --engine {params.engine} -r {input.genome} {params.extra} -o {params.prefix} --logfile {log} {input.truth} {input.query}"
+        "hap.py --threads {threads} --engine {params.engine} -r {input.genome} {params.extra} -o {params.prefix} --roc GQX --logfile {log} {input.truth} {input.query}"
 
 
 rule prepare_wittyer:

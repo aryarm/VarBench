@@ -56,7 +56,7 @@ develop_in:
         illumina: ../teams/CSE284_SP21_A00/team2/test_data/illumina/HG001.GRCh38_full_plus_hs38d1_analysis_set_minus_alts.300x.chr22.bam
         ont: ../teams/CSE284_SP21_A00/team2/test_data/ont/NA12878-minion-ul_GRCh38.decoys.chr22.bam
         pacbio: ../teams/CSE284_SP21_A00/team2/test_data/pacbio/HG001_GRCh38.haplotag.RTG.trio.decoys.chr22.bam
-            
+    chr: chr22
 full_run:
     tech:
         ont: ../teams/CSE284_SP21_A00/team2/data/ont/NA12878-minion-ul_GRCh38.decoys.bam
@@ -64,4 +64,4 @@ full_run:
         pacbio: ../teams/CSE284_SP21_A00/team2/data/pacbio/HG001_GRCh38.haplotag.RTG.trio.decoys.bam
 
 nanosv_bed: ../teams/CSE284_SP21_A00/team2/ref/hg38_nanosv.bed
-wittyer_config: ~/Varbench/config/wittyer_config.json
+wittyer_config: config/wittyer_config.json
