@@ -1,3 +1,4 @@
 dependencies:
-  - conda-forge::r-env==0.13.2
+  - conda-forge::r-renv==0.13.2
   - conda-forge::libcurl==7.76.1
+  - conda-forge::nb_conda_kernels==2.3.1
