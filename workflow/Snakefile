@@ -137,6 +137,11 @@ rule clair3:
         --model_path=`pwd`"/models/{params.platform}" \
         --output="../../{params.output_prefix}" \
         {params.dev_chr}
+        
+        cd ../..
+        
+        # rename
+        mv {params.output_prefix}/merge_output.vcf.gz {params.output_prefix}/clair3.vcf.gz 
         """
 
 rule nanosv:
@@ -304,7 +309,7 @@ rule wittyer:
         truth = truth,
         query = rules.index_vcf.output.vcf, 
         query_idx = rules.index_vcf.output.idx,
-        config = config['wittyer_config']
+        # config = config['wittyer_config']
     output: 
         dir = directory(out+"/{tech}/wittyer/{caller}")
     conda: "envs/dotnet.yaml"
