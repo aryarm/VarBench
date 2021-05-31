@@ -1,41 +1,67 @@
 #!/usr/bin/env Rscript
 
-library(ggplot2)
+library(tidyverse, quietly = TRUE)
 library(happyR)
-library(magrittr)
-
 
 args <- commandArgs(trailingOnly = TRUE)
-prefix <- c("results/ont/happy/longshot/longshot", "results/illumina/happy/longshot/longshot", "results/pacbio/happy/longshot/longshot")
+prefix <- c("ont" = "results/ont/happy/longshot/longshot", "illumina"="results/illumina/happy/longshot/longshot","pacbio"="results/pacbio/happy/longshot/longshot")
 output <- args[1]
 
-hapdata_ont <- happyR::read_happy(prefix[1])
-hapdata_illumina <- happyR::read_happy(prefix[2])
-hapdata_pacbio <- happyR::read_happy(prefix[3])
+hapdata_pr = map_df(1:3, function(i){
+    happyR::read_happy(prefix[i], lazy = FALSE) %>% 
+    pr_data(var_type = "snv", filter = c("ALL")) %>% 
+    mutate(tech = names(prefix)[i])
+})
 
-all_pr_ont <- pr_data(hapdata_ont)
-all_pr_illumina <- pr_data(hapdata_illumina)
-all_pr_pacbio <- pr_data(hapdata_pacbio)
+hapdata_pr_pass = map_df(1:3, function(i){
+    happyR::read_happy(prefix[i], lazy = FALSE) %>% 
+    pr_data(var_type = "snv", filter = c("PASS")) %>% 
+    mutate(tech = names(prefix)[i]) %>%
+    filter(QQ > 0)
+})
 
-all_pr_ont = all_pr_ont[all_pr_ont$Type == 'SNP',]
-all_pr_illumina = all_pr_illumina[all_pr_illumina$Type == 'SNP',]
-all_pr_pacbio = all_pr_pacbio[all_pr_pacbio$Type == 'SNP',]
+hapdata_summary = map_df(1:3, function(i){
+    happyR::read_happy(prefix[i], lazy = FALSE)$summary %>%
+    filter(Type == "SNP") %>%
+    mutate(tech = names(prefix)[i])
+})
 
-ont_summary = hapdata_ont$summary[hapdata_ont$summary$Type == 'SNP' & hapdata_ont$summary$Filter == 'ALL',c('METRIC.Recall', 'METRIC.Precision')]
-illumina_summary = hapdata_illumina$summary[hapdata_illumina$summary$Type == 'SNP' & hapdata_illumina$summary$Filter == 'ALL',c('METRIC.Recall', 'METRIC.Precision')]
-pacbio_summary = hapdata_pacbio$summary[hapdata_pacbio$summary$Type == 'SNP' & hapdata_pacbio$summary$Filter == 'ALL',c('METRIC.Recall', 'METRIC.Precision')]
 
-ggplot() +
-  geom_line(data = all_pr_ont, aes(x = METRIC.Recall, y = METRIC.Precision), color = "red") +
-  geom_line(data = all_pr_pacbio, aes(x = METRIC.Recall, y = METRIC.Precision), color = "purple") +
-  theme_minimal() +
-  geom_point(data = ont_summary, aes(x = METRIC.Recall, y = METRIC.Precision), color="red") +
-  geom_point(data = illumina_summary, aes(x = METRIC.Recall, y = METRIC.Precision), color="blue") +
-  geom_point(data = pacbio_summary, aes(x = METRIC.Recall, y = METRIC.Precision), color="purple") +
-  scale_x_continuous(limits = c(0, 1)) +
-  scale_y_continuous(limits = c(0.5, 0.75)) +
-  theme(text = element_text(size=20)) + 
-  xlab("Recall") +
-  ylab("Precision")
+theme_set(theme_minimal())
 
+
+# Precision Curve
+ggplot(hapdata_pr, aes(x = QQ, y = METRIC.Precision, color = tech)) +
+    geom_line() +
+    labs(x = "Quality Threshold", y = "Precision", color = "Seq Tech") 
+
+output = "P.png"
+ggsave(output)
+
+
+# Recall Curve
+ggplot(hapdata_pr, aes(x = QQ, y = METRIC.Recall, color = tech)) +
+    geom_line() +
+    labs(x = "Quality Threshold", y = "Recall", color = "Seq Tech") 
+
+output = "R.png"
+ggsave(output)
+
+# Precision-Recall Curve
+ggplot(hapdata_pr, aes(x = METRIC.Recall, y = METRIC.Precision)) +
+    geom_line(aes(color = tech)) +
+    geom_point(data = hapdata_summary, aes(shape = Filter), color = "black") +
+    labs(x = "Recall", y = "Precision", color = "Seq Tech", shape = "Quality Filter") 
+
+output = "PR.png"
+ggsave(output)
+
+
+# F1 score
+hapdata_pr %>%
+    ggplot(aes(x = QQ, y = METRIC.F1_Score, color = tech)) +
+    geom_line() +
+    labs(x = "Quality Threshold", y = "F1 Score", color = "Seq Tech") 
+
+output = "F1_QQ.png"
 ggsave(output)
