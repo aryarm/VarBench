@@ -10,7 +10,9 @@ configfile: "config/config.yaml"
 # remove any trailing slashes in directories
 out = str(Path(config['out']))
 data = str(Path(config['data_dir']))
-reads = { }
+ref = config['ref']
+truth = config['develop_in']['truth'] if config['develop'] else config['full_run']['truth']
+reads = {}
 
 # if we're in development mode, get the reads from DataHub instead of the data dir
 if config['develop']:
@@ -19,8 +21,6 @@ if config['develop']:
 else:
     for tech in config['full_run']['tech']:
         reads[tech] = config['full_run']['tech'][tech]
-
-ref = config['ref']
 
 # WHICH CALLERS TO RUN?
 callers = {
@@ -259,7 +259,7 @@ rule index_vcf:
 
 rule happy:
     input:
-        truth = config['develop_in']['truth'] if config['develop'] else config['full_run']['truth'],
+        truth = truth,
         query = rules.index_vcf.output.vcf, 
         query_idx = rules.index_vcf.output.idx,
         genome = ref,
@@ -273,7 +273,8 @@ rule happy:
         engine="vcfeval",
         prefix=lambda wc, input, output: output[0].split('.')[0],
         ## parameters such as -L to left-align variants
-        extra="--verbose"
+        extra="--verbose",
+        qual = "--roc GQX"
     log: "logs/{tech}/happy_{caller}.log"
     threads: 2
     benchmark:
@@ -300,7 +301,7 @@ rule prepare_wittyer:
 rule wittyer:
     input:
         witty_dir = rules.prepare_wittyer.output,
-        truth = config['truth'],
+        truth = truth,
         query = rules.index_vcf.output.vcf, 
         query_idx = rules.index_vcf.output.idx,
         config = config['wittyer_config']
