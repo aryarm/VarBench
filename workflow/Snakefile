@@ -230,14 +230,15 @@ rule cutesv:
         bam = lambda wildcards: reads[wildcards.tech],
         ref = ref
     output:
-        vcf = out+"/{tech}/variants/cutesv.vcf.gz"
+        vcf = out+"/{tech}/variants/cutesv.vcf.gz",
+        dir = temp(directory(out+"/{tech}/variants/cutesv/"))
     log:
         "logs/cutesv_{tech}.log"
     benchmark:
         "bench/cutesv_{tech}.tsv"
     conda: "envs/cutesv.yaml"
     shell: 
-        "cuteSV {input.bam} {input.ref} {output.vcf} ./ 2> {log}"
+        "mkdir -p {output.dir} && cuteSV {input.bam} {input.ref} {output.vcf} {output.dir} 2> {log}"
         
 rule index_vcf:
     input:
@@ -271,7 +272,7 @@ rule happy:
         prefix=lambda wc, input, output: output[0].split('.')[0],
         ## parameters such as -L to left-align variants
         extra="--verbose",
-        qual = "--roc GQX"
+        qual = "--roc GQ"
     log: "logs/{tech}/happy_{caller}.log"
     threads: 2
     benchmark:
