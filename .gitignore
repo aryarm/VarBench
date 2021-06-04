@@ -3,6 +3,10 @@ results
 resources/
 .snakemake/
 bench/
+qlog*
+log*
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

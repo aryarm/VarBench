@@ -22,11 +22,11 @@ out_path="results"
 mkdir -p "$out_path"
 
 # clear leftover log files
-if [ -f "${out_path}/log" ]; then
-	echo ""> "${out_path}/log";
+if [ -f "log" ]; then
+	echo ""> "log";
 fi
-if [ -f "${out_path}/qlog" ]; then
-	echo ""> "${out_path}/qlog";
+if [ -f "qlog" ]; then
+	echo ""> "qlog";
 fi
 
 # try to find and activate the snakemake conda env if we need it
@@ -34,7 +34,7 @@ if ! command -v 'snakemake' &>/dev/null && \
 	command -v 'conda' &>/dev/null && \
    [ "$CONDA_DEFAULT_ENV" != "snakemake" ] && \
    conda info --envs | grep "$CONDA_ROOT/snakemake" &>/dev/null; then
-        echo "Snakemake not detected. Attempting to switch to snakemake environment." >> "$out_path/log"
+        echo "Snakemake not detected. Attempting to switch to snakemake environment." >> "log"
         eval "$(conda shell.bash hook)"
         conda activate snakemake
 fi
@@ -47,5 +47,5 @@ snakemake \
 --conda-frontend conda \
 -k \
 -j 2 \
-"$@" 2>>"$out_path/log" >>"$out_path/qlog"
+"$@" 2>>"log" >>"qlog"
 

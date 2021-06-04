@@ -53,6 +53,7 @@ develop_in:
         illumina: ../teams/CSE284_SP21_A00/team2/test_data/illumina/HG001.GRCh38_full_plus_hs38d1_analysis_set_minus_alts.300x.chr22.bam
         ont: ../teams/CSE284_SP21_A00/team2/test_data/ont/NA12878-minion-ul_GRCh38.decoys.chr22.bam
         pacbio: ../teams/CSE284_SP21_A00/team2/test_data/pacbio/HG001_GRCh38.haplotag.RTG.trio.decoys.chr22.bam
+    chr: chr22
     truth: ../teams/CSE284_SP21_A00/team2/data/NA12878_truth/HG001_GRCh38_GIAB_highconf_CG-IllFB-IllGATKHC-Ion-10X-SOLID_CHROM1-X_v.3.3.2_highconf_PGandRTGphasetransfer.chr22.vcf.gz
 full_run:
     tech:
@@ -61,4 +62,3 @@ full_run:
         pacbio: ../teams/CSE284_SP21_A00/team2/data/pacbio/HG001_GRCh38.haplotag.RTG.trio.decoys.bam
     truth: ../teams/CSE284_SP21_A00/team2/data/NA12878_truth/HG001_GRCh38_GIAB_highconf_CG-IllFB-IllGATKHC-Ion-10X-SOLID_CHROM1-X_v.3.3.2_highconf_PGandRTGphasetransfer.vcf.gz
 nanosv_bed: ../teams/CSE284_SP21_A00/team2/ref/hg38_nanosv.bed
-wittyer_config: ~/Varbench/config/wittyer_config.json
