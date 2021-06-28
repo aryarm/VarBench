@@ -35,8 +35,7 @@ ggplot(hapdata_pr, aes(x = QQ, y = METRIC.Precision, color = tech)) +
     geom_line() +
     labs(x = "Quality Threshold", y = "Precision", color = "Seq Tech") 
 
-output = "P.png"
-ggsave(output)
+ggsave(paste0(output,"/P.png"))
 
 
 # Recall Curve
@@ -44,8 +43,8 @@ ggplot(hapdata_pr, aes(x = QQ, y = METRIC.Recall, color = tech)) +
     geom_line() +
     labs(x = "Quality Threshold", y = "Recall", color = "Seq Tech") 
 
-output = "R.png"
-ggsave(output)
+
+ggsave(paste0(output,"/R.png"))
 
 # Precision-Recall Curve
 ggplot(hapdata_pr, aes(x = METRIC.Recall, y = METRIC.Precision)) +
@@ -53,8 +52,8 @@ ggplot(hapdata_pr, aes(x = METRIC.Recall, y = METRIC.Precision)) +
     geom_point(data = hapdata_summary, aes(shape = Filter), color = "black") +
     labs(x = "Recall", y = "Precision", color = "Seq Tech", shape = "Quality Filter") 
 
-output = "PR.png"
-ggsave(output)
+
+ggsave(paste0(output,"/PR.png"))
 
 
 # F1 score
@@ -63,5 +62,5 @@ hapdata_pr %>%
     geom_line() +
     labs(x = "Quality Threshold", y = "F1 Score", color = "Seq Tech") 
 
-output = "F1_QQ.png"
-ggsave(output)
+
+ggsave(paste0(output,"/F1_QQ.png"))
