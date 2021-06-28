@@ -25,10 +25,8 @@ else:
 # WHICH CALLERS TO RUN?
 callers = {
     'gatk', 'freebayes' , 'sniffles', 'longshot', 'nanosv', 'nanopolish', 'picky',
-    'clair3', 'cutesv', 'strelka'
+    'clair3', 'cutesv'
 }
-callers.remove('nanopolish') # TODO: remove this!
-callers.remove('strelka') # TODO: remove this!
 if config['callers']:
     # double check that the user isn't asking for callers that we can't run
     if not callers.issuperset(config['callers']):
@@ -37,8 +35,8 @@ if config['callers']:
 
 rule all:
    input:
-        # confusion = out+"/matrix.tsv",
-        vcfs = expand(out+"/{tech}/variants/{caller}.vcf.gz", tech = reads.keys() , caller = callers)
+        vcfs = expand(out+"/{tech}/variants/{caller}.vcf.gz", tech = reads.keys(), caller = callers),
+        longshot_plots = expand(out+"/plots/{caller}/PR.png", caller=['longshot'])
 
 rule download_data:
     params:
@@ -326,3 +324,14 @@ rule wittyer:
             -em cts \
             -o {output.dir}
         """
+
+rule happy_plots:
+    input:
+        happy_files = expand(rules.happy.output, tech=reads.keys(), caller=['{caller}'])
+    params:
+        prefix = lambda wildcards, output: Path(output[0]).parents[0]
+    output:
+        expand(out+"/plots/{caller}/{fname}.png", fname=['P', 'R', 'PR', 'F1_QQ'], caller=['{caller}'])
+    conda: "renv.yaml"
+    shell:
+        "Rscript scripts/happyR_pcr.R {params.prefix}"
